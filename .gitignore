@@ -1,0 +1,7 @@
+build
+.vscode/
+__pycache__/
+.micropico
+pico_sdk_import.cmake
+CMakeLists.txt
+
