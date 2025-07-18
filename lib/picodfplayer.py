@@ -1,5 +1,5 @@
 #DFPlayer mp3 player Driver using UART for Raspberry Pi Pico.
-
+#modified to include a transistor pin, muting the speaker while idle
 from machine import UART, Pin
 from utime import sleep_ms, sleep
 
@@ -19,8 +19,9 @@ class DFPlayer():
     COMMAND_LATENCY =   500
 
 
-    def __init__(self, uartInstance, txPin, rxPin, busyPin):
+    def __init__(self, uartInstance, txPin, rxPin, busyPin, transistorPin):
         self.playerBusy=Pin(busyPin, Pin.IN, Pin.PULL_UP)
+        self.transistorPin = Pin(transistorPin, Pin.OUT)
         self.uart = UART(uartInstance, baudrate=self.UART_BAUD_RATE, tx=Pin(txPin), rx=Pin(rxPin), bits=self.UART_BITS, parity=self.UART_PARITY, stop=self.UART_STOP)
 
     def split(self, num):
@@ -93,19 +94,37 @@ class DFPlayer():
         self.sendcmd(0x0C, 0x00, 0x00)
 
     def resume(self):
+        self.transistorPin.on()
         self.sendcmd(0x0D, 0x00, 0x00)
 
     def pause(self):
+        self.transistorPin.off()
         self.sendcmd(0x0E, 0x00, 0x00)
 
     def playTrack(self, folder, file):
+        self.transistorPin.on()
         self.sendcmd(0x0F, folder, file)
                  
     def playMP3(self, filenum):
+        self.transistorPin.on()
         a = (filenum >> 8) & 0xff
         b = filenum & 0xff
         return self.sendcmd(0x12, a, b)#a, b)
 
+    #control transistor and thus the speaker
+    def trans_off(self):
+        self.transistorPin.off()
+
+    def trans_on(self):
+        self.transistorPin.on()
+    
+    def trans_toggle(self):
+        self.transistorPin.toggle()
+
+    def cleanup(self):
+        self.transistorPin.off()
+        self.pause()
+        
     #Query System Parameters
     def init(self, params):
         self.sendcmd(0x3F, 0x00, params)
