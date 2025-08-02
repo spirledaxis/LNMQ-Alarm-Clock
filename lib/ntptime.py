@@ -6,25 +6,17 @@ import machine #type: ignore
 import json
 import network #type: ignore
 import wificreds
+
 # The NTP host can be configured at runtime by doing: ntptime.host = 'myhost.org'
 host = "time.windows.com"
 # The NTP socket timeout can be configured at runtime by doing: ntptime.timeout = 2
-timeout = 1
-sta_if = network.WLAN(network.WLAN.IF_STA)
-ap_if = network.WLAN(network.WLAN.IF_AP)
-sta_if.active(True)
-sta_if.connect(wificreds.name, wificreds.password)
-while not sta_if.isconnected():
-    print("not connected to wifi yet")
-    sleep(1)
 
-print(f"connected to the wifi! {sta_if.ipconfig('addr4')}")
+timeout = 1
+
 def get_time():
     NTP_QUERY = bytearray(48)
     NTP_QUERY[0] = 0x1B
-    print("yo")
     addr = socket.getaddrinfo(host, 123)[0][-1]
-    print("gurt")
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.settimeout(timeout)
@@ -84,7 +76,7 @@ def first_sunday_in_november(year):
 
 def is_dst_pacific(t):
     """Detect if DST is active for Pacific Time using UTC time tuple."""
-    year, month, mday, hour, minute, second, weekday, yearday = t
+    year = t[0]
     utc_sec = time.mktime(t)
 
     # DST starts: Second Sunday of March at 2:00 AM local time = 10:00 UTC
@@ -112,9 +104,16 @@ def settime():
     local_tm = time.gmtime(local_sec)
 
     # Set RTC (year, month, mday, weekday, hour, minute, second, subsecond)
-    machine.RTC().datetime((
-        local_tm[0], local_tm[1], local_tm[2],
-        local_tm[6] + 1,  # weekday: 0=Monday in RTC
-        local_tm[3], local_tm[4], local_tm[5],
-        0
-    ))
+    rtc_tuple = (
+    local_tm[0],  # year
+    local_tm[1],  # month
+    local_tm[2],  # day
+    local_tm[6],  # weekday (0=Mon)
+    local_tm[3],  # hour
+    local_tm[4],  # minute
+    local_tm[5],  # second
+    0             # subseconds (usually 0)
+)
+    
+    machine.RTC().datetime(rtc_tuple)
+

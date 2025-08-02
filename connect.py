@@ -1,6 +1,7 @@
 from wificreds import name, password
+import network #type: ignore
 def do_connect():
-    import network #type: ignore
+    print('do_connected called')
     sta_if = network.WLAN(network.WLAN.IF_STA)
     if not sta_if.isconnected():
         print('connecting to network...')
@@ -9,3 +10,7 @@ def do_connect():
         while not sta_if.isconnected():
             pass
     print('network config:', sta_if.ipconfig('addr4'))
+
+def check_connection():
+    sta_if = network.WLAN(network.WLAN.IF_STA)
+    return sta_if.isconnected()

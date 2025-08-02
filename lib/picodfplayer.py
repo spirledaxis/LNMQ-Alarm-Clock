@@ -37,6 +37,7 @@ class DFPlayer():
         return self.uart.read()
 
     def queryBusy(self):
+        """nots playerbusy"""
         return not self.playerBusy.value()
         
     #Common DFPlayer control commands
@@ -102,6 +103,7 @@ class DFPlayer():
         self.sendcmd(0x0E, 0x00, 0x00)
 
     def playTrack(self, folder, file):
+        """recommended that a delay follows before reading querybusy ~0.5s"""
         self.transistorPin.on()
         self.sendcmd(0x0F, folder, file)
                  

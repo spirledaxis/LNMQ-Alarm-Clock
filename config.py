@@ -28,11 +28,17 @@ cs = 11
 spi_channel_disp = 1
 
 #inputs
-snd_fx_l = 0
-snd_fx_r = 0
-snze = 0
+snd_fx_l = 8 #these are also paired
+#right wire fell off, idc enough to solder it on. Thus, use the left one
+snd_fx_r = 2
+snze_l = 4 #the snze buttons seems to be paired
+snze_r = 3 #so, you can use either (but not both!)
 alm_set = 0
-clk_set = 0
-fwd = 0
-rev = 0
-switch = 0
+clk_set = 1
+fwd = 7
+rev = 9
+switch = 6
+
+#other
+ip = '192.168.1.51'
+led = 5

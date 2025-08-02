@@ -2,7 +2,7 @@ import socket
 import connect
 import json
 from machine import RTC #type: ignore
-
+import time
 html = """
 <!DOCTYPE html>
 <html>
@@ -39,60 +39,79 @@ print('Listening on http://0.0.0.0/')
 rtc = RTC()
 
 while True:
-  cl, addr = s.accept()
-  print('Client connected from', addr)
-  request = cl.recv(1024).decode('utf-8')
+    try:
+        cl, addr = s.accept()
+    except Exception:
+        continue
+  
+    print('yo')
+    print('Client connected from', addr)
+  
+    request = b''
+    for _ in range(50):  # try up to ~0.5 sec (50 * 0.01)
+        try:
+            request = cl.recv(1024)
+            request = str(request)
+            break
+        except OSError as e:
+            if e.errno == 11:  # EAGAIN
+                time.sleep(0.01)
+                continue
+            else:
+                raise
+    else:
+        print('Timeout waiting for data')
+        cl.close()
+        continue
 
   # Look for '?motd=' and '&author=' in the request
-  if 'GET /?motd=' in request:
-      query = request.split('GET /?')[1].split(' ')[0]
-      params = query.split('&')
-      for p in params:
-          if p.startswith('motd='):
-              motd = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
-          elif p.startswith('author='):
-              author = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
-          
-      print(f"New data: {motd}, {author}")
+    if 'GET /?motd=' in request:
+        query = request.split('GET /?')[1].split(' ')[0]
+        params = query.split('&')
+        for p in params:
+            if p.startswith('motd='):
+                motd = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
+            elif p.startswith('author='):
+                author = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
 
-      with open('motds.json', 'r') as f:
-          data = json.load(f)
-          print(data)
-      highest_id_dict = data[-1]
-      highest_id = highest_id_dict["id"]
-      new_id = highest_id + 1
+        print(f"New data: {motd}, {author}")
 
-      now = rtc.datetime()
-      newdata = {
-          "motd": motd,
-          "id": new_id,
-          "author": author,
-          "time": now
+        with open('motds.json', 'r') as f:
+            data = json.load(f)
+            print(data)
+        highest_id_dict = data[-1]
+        highest_id = highest_id_dict["id"]
+        new_id = highest_id + 1
 
-      }
-      
-      data.append(newdata)
+        now = rtc.datetime()
+        newdata = {
+            "motd": motd,
+            "id": new_id,
+            "author": author,
+            "time": now
+        }
+        
+        data.append(newdata)
 
-      with open('motds.json', 'w') as f:
-              json.dump(data, f)
-      
-      print("saved the new data")
+        with open('motds.json', 'w') as f:
+                json.dump(data, f)
+        
+        print("saved the new data")
 
-  if 'GET /motds.json' in request:
-    with open('motds.json', 'r') as f:
+    if 'GET /motds.json' in request:
+        with open('motds.json', 'r') as f:
             data = json.load(f)
 
-    response_body = json.dumps(data)
-    cl.send('HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n')
-    cl.send(response_body)
+        response_body = json.dumps(data)
+        cl.send('HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n')
+        cl.send(response_body)
+        cl.close()
+        continue
+
+
+    response = html.format(motd=motd, author=author)
+
+    cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+    cl.send(response)
     cl.close()
-    continue
-    
-
-  response = html.format(motd=motd, author=author)
-  
-  cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-  cl.send(response)
-  cl.close()
-
 

@@ -13,3 +13,4 @@ tests
 fonts
 notes.txt
 *.json
+bot_token.py

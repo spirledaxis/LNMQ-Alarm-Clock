@@ -127,6 +127,22 @@ class Display(object):
         self.clear_buffers()
         self.present()
 
+    def send_cmd(self, cmd):
+        self.dc.value(0)       # Command mode
+        self.cs.value(0)       # Enable chip (if cs pin is used)
+        self.spi.write(bytearray([cmd]))
+        self.cs.value(1)       # Disable chip
+        self.dc.value(1)       # Back to data mode
+
+    def set_contrast(self, value):
+        """
+        Set display contrast.
+        :param value: integer from 0 to 255
+        """
+        value = max(0, min(255, value))  # Clamp value to valid range
+        self.send_cmd(0x81)              # Set Contrast Control command
+        self.send_cmd(value)             # Contrast level
+
     def cleanup(self):
         """Clean up resources."""
         self.clear()

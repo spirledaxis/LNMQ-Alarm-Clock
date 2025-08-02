@@ -44,9 +44,16 @@ def date_search(data, timestamp, greater_less):
 
 
 def select_random_motd(data):
-    random.randint(1, len(data))
+    r = random.randint(1, len(data))
+    motd = id_search(data, r)
+    print(motd)
+    return motd
 
 
 
 
-
+if __name__ == '__main__':
+    data = fetch_data()
+    print(data)
+    results = id_search(data, 1)
+    print(results)
