@@ -5,7 +5,7 @@ import config
 from lib.ssd1309 import Display
 from lib.xglcd_font import XglcdFont
 import json
-from components import Button
+
 rtc = RTC()
 bell_icon = bytearray([0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
 plug_icon = bytearray([0x00, 0x10, 0xf8, 0x1f, 0x1f, 0xf8, 0x10, 0x00])
@@ -20,8 +20,9 @@ battery_icon = framebuf.FrameBuffer(battery_icon, 8, 8, framebuf.MONO_VLSB)
 wifi_icon = framebuf.FrameBuffer(wifi_icon, 8, 8, framebuf.MONO_VLSB)
 no_wifi_icon = framebuf.FrameBuffer(no_wifi_icon, 8, 8, framebuf.MONO_VLSB)
 mail_icon = framebuf.FrameBuffer(mail_icon, 8, 8, framebuf.MONO_VLSB)
-spi = SPI(config.spi_channel_disp, baudrate=10_000_000, sck=Pin(config.sck), mosi=Pin(config.sda))
+
 #origin in bottom right
+spi = SPI(config.spi_channel_disp, baudrate=10_000_000, sck=Pin(config.sck), mosi=Pin(config.sda))
 display = Display(spi, dc=Pin(config.dc), cs=Pin(config.cs), rst=Pin(config.res), offscreen_warnings=False, flip=True)
 # i2c = I2C(1, sda=Pin(14), scl=Pin(15), freq=400_000)
 # display = Display(i2c=i2c, offscreen_warnings=True)
@@ -37,10 +38,10 @@ motd_len = bally_mini.measure_text(motd)
 scroller = 0
 display.set_contrast(0)
 
+
 def home(usb_power, switch_state, wifi_state, display_mail, motd, motd_pos, now):
     assert type(motd) is str
-    #bug: the motd ends early on larger strings.
-
+  
     month = now[1]
     month_day = now[2]
     day_name_int = now[3]
@@ -94,17 +95,17 @@ def home(usb_power, switch_state, wifi_state, display_mail, motd, motd_pos, now)
         display.fill_rectangle(x=((display.width-time_len) // 4) - 8, y=(display.height // 2) - 8, w=8, h=8, invert=True)
 
     #motd
-    
     display.draw_text(motd_pos, ((display.height // 2) + time_height // 2) + bally_mini.height // 2 - 2,
                     motd, bally, rotate=180)
-    
     
     display.present()
     
    
-
-
-def set_alarm(hour, minute, ampm, ringtone_index, ringtone_json, select_hm, action):
+edit_options = ['hour', 'minute', 'ampm', 'ringtone']
+edit_index = 0
+    
+def set_alarm(hour, minute, ampm, ringtone_index, ringtone_json, selection, action):
+    global edit_index
     assert type(minute) is int
     assert type(hour) is int
     if action == 'exit':
@@ -116,58 +117,70 @@ def set_alarm(hour, minute, ampm, ringtone_index, ringtone_json, select_hm, acti
         }]
         with open('alarms.json', 'w') as f:
             json.dump(data, f)
-        return hour, minute, ampm, ringtone_index, select_hm, True
+        return hour, minute, ampm, ringtone_index, selection, True
 
     elif action == 'fwd':
-        if select_hm == 'minute':
+        if selection == 'minute':
             if minute + 5 >= 60:
                 minute = 0
             else:
                 minute += 5
-        elif select_hm == 'hour':
+        elif selection == 'hour':
             if hour + 1 > 12:
                 hour = 1
             else:
                 hour += 1
-        elif select_hm == 'ampm':
-            if ampm == 'am':
-                ampm = 'pm'
-            elif ampm == 'pm':
-                ampm = 'am'
+        elif selection == 'ringtone':
+            ringtone_index += 1
+            with open('ringtones.json', 'r') as f:
+                data = json.load(f)
+                    
+            for i in data:
+                if int(i['index']) == ringtone_index:
+                    ringtone_text = i['description']
+                    break
+            else:
+                ringtone_index = 1
 
     elif action == 'rev':
-        if select_hm == 'minute':
+        if selection == 'minute':
             if minute - 5 <= 0:
                 minute = 55
             else:
                 minute -= 5
-        elif select_hm == 'hour':
+        elif selection == 'hour':
             if hour - 1 <= 0:
                 hour = 12
             else:
                 hour -= 1
-        elif select_hm == 'ampm':
+
+        elif selection == 'ringtone':
+            ringtone_index -= 1
+            with open('ringtones.json', 'r') as f:
+                data = json.load(f)
+                
+            highest_index = data[-1]['index']
+
+            for i in data:
+                if int(i['index']) == ringtone_index:
+                    ringtone_text = i['description']
+                    break
+            else:
+                ringtone_index = highest_index
+    
+    elif action == 'selection':
+
+        print("selecting")
+        edit_index = (edit_index + 1) % len(edit_options)
+        selection = edit_options[edit_index]
+    
+    if action == 'fwd' or action == 'rev':
+        if selection == 'ampm':
             if ampm == 'am':
                 ampm = 'pm'
             elif ampm == 'pm':
                 ampm = 'am'
-        
 
-    elif action == 'change_ringtone':
-        if ringtone_index >= len(ringtone_json):
-            ringtone_index = 1
-        else:
-            ringtone_index += 1
-
-    elif action == 'selection':
-        print("selecting")
-        if select_hm == 'hour':
-            select_hm = 'minute'
-        elif select_hm == 'minute':
-            select_hm = 'ampm'
-        elif select_hm == 'ampm':
-            select_hm = 'hour'
-    
     time_display = f"{hour}:{minute:02} {ampm}"
 
     time_height = timefont.height
@@ -189,37 +202,29 @@ def set_alarm(hour, minute, ampm, ringtone_index, ringtone_json, select_hm, acti
     display.fill_rectangle(0, 0, display.width, display.height, True)
     display.draw_text(x, y, time_display, timefont, rotate=180)
     
-    if select_hm == 'hour':
+    ringtone_text = f"{ringtone_index}. {ringtone_json[ringtone_index-1]['description']}"
+    ringtone_y = display.height // 2 + time_height // 2 + bally_mini.height // 2
+    display.draw_text((display.width + time_len) // 2, ringtone_y,
+                ringtone_text, bally, rotate=180)
+    
+    if selection == 'hour':
         display.draw_hline(x - hour_len, y-3, hour_len)
         display.draw_hline(x - hour_len - colon_len - minute_len, y-3, minute_len, invert=True)
-    if select_hm == 'minute':
+    elif selection == 'minute':
         display.draw_hline(x - hour_len - colon_len - minute_len, y-3, minute_len)
         display.draw_hline(x - hour_len, y-3, hour_len, invert=True)
-    if select_hm == 'ampm':
-        display.draw_hline(x - hour_len - colon_len - minute_len, y-3, minute_len, invert=True)
+    elif selection == 'ampm':
         display.draw_hline(x - hour_len - colon_len - minute_len - space_len -ampm_len, y-3, ampm_len)
-    #display.fill_rectangle(0, 0, display.width, display.height, True)
-    
-    ringtone_text = f"{ringtone_index}. {ringtone_json[ringtone_index-1]['description']}"
-    # display.draw_text((display.width + time_len) // 2, ((display.height // 2) + time_height // 2)-10,
-    #             ringtone_text, bally, rotate=180)
-    
-    #display.draw_rectangle(0, 0, 127, 63)
+        display.draw_hline(x - hour_len - colon_len - minute_len, y-3, minute_len, invert=True)
+    elif selection == 'ringtone':
+        display.draw_vline((display.width + time_len) // 2, ringtone_y, bally.height)
+        display.draw_hline(x - hour_len - colon_len - minute_len - space_len -ampm_len, y-3, ampm_len, invert=True)
+
     display.present()
-    #maybe handle callbacks and buttons outside?
-#     return [
-#     Button(config.alm_set, on_alm_set),
-#     Button(config.fwd, on_fwd),
-#     Button(config.rev, on_rev),
-#     Button(config.clk_select, on_clk_select),
-#     Button(config.snze, exit),
-#     Button(config.snd_fx_r, on_snd_fx_r)
-# ]
-    return int(hour), int(minute), ampm, ringtone_index, select_hm, False
+    return int(hour), int(minute), ampm, ringtone_index, selection, False
 
 if __name__ == '__main__':
     firsttime_alm = True
-    
     try:
         while True:
             if firsttime_alm:

@@ -41,4 +41,3 @@ switch = 6
 
 #other
 ip = '192.168.1.51'
-led = 5

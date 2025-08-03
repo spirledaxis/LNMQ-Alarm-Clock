@@ -7,32 +7,22 @@ Speaker
 """
 #imports
 from machine import Pin, RTC, SPI #type: ignore
-from lib.neotimer import Neotimer
+from utime import sleep_ms #type: ignore
+import urequests #type: ignore
+import errno
 from components import Motor, Alarm, Switch, Button
+from lib.neotimer import Neotimer
 import lib.timeutils as timeutils
 from lib.picodfplayer import DFPlayer
-from lib.xglcd_font import XglcdFont
-from lib.ssd1309 import Display
-from utime import sleep_ms #type: ignore
+from lib.ntptime import settime
+from motds import motd_parser
+from connect import check_connection
+from displaystates import bally_mini, display
+from motds import motd_reciever_copy_2
 import connect
 import config
 import displaystates
 import json
-from motds import motd_parser
-import urequests #type: ignore
-import errno
-import lib.timeutils
-from connect import check_connection
-from displaystates import bally_mini, display
-from motds import motd_reciever_copy_2
-
-#init
-#remove network for testing
-connect.do_connect()
-from lib.ntptime import settime
-settime()
-
-rtc = RTC()
 
 #motor setup
 motor = Motor(config.motor_l, config.motor_r, 2000)
@@ -67,12 +57,11 @@ custom_movement = [
     ('r', 1000, 90),   # move right for 0.5s at 90% speed
     ('w', 500, 0),    # wait for 0.2s
     ('l', 1000, 90),  # move left for 0.7s at full speed
-    
 ]
 
 speaker = DFPlayer(config.uarto_channel_df, config.tx, config.rx, config.busy, config.transistor)
 
-#region alm disp setup
+
 alm_cmd = None
 def make_set_alm_cmd(val):
     def handler():
@@ -88,20 +77,18 @@ def make_set_home_cmd(val):
     return handler
 
 alm_buttons = [
-    Button(config.alm_set, make_set_alm_cmd('change_ringtone')),
     Button(config.fwd, make_set_alm_cmd('fwd')),
     Button(config.rev, make_set_alm_cmd('rev')),
-    Button(config.clk_set, make_set_alm_cmd('select_ampm')),
-    Button(config.snze_l, make_set_alm_cmd('exit')),
+    Button(config.alm_set, make_set_alm_cmd('exit')),
     Button(config.snd_fx_l, make_set_alm_cmd('selection'))
 ]
 home_buttons = [
     Button(config.alm_set, make_set_home_cmd('goto_alarm')),
     Button(config.snze_l, make_set_home_cmd('toggle_light')),
-    Button(config.fwd, make_set_home_cmd('read_msg'))
+    Button(config.fwd, make_set_home_cmd('read_msg')),
+    Button(config.snd_fx_l, make_set_home_cmd('toggle_display'))
 ]
 firsttime_alm = True
-#endregion
 
 with open('motds.json', 'r') as f:
     motds_data = json.load(f)
@@ -115,13 +102,15 @@ with open('alarms.json', 'r') as f:
     alarm_ringtone = alarm['ringtone']
 
 mode = 'home'
-myalarm = Alarm(alarm_hour, alarm_minute, custom_movement, alarm_ringtone, motor, speaker)
-refresh_time_cooldown_timer = Neotimer(0)
-refresh_time_cooldown_timer.start()
+display_on = True
 scroller = 0
 usb_power = Pin('WL_GPIO2', Pin.IN)
 switch = Switch(config.switch)
-mode = 'home'
+
+myalarm = Alarm(alarm_hour, alarm_minute, custom_movement, alarm_ringtone, motor, speaker)
+refresh_time_cooldown_timer = Neotimer(0)
+refresh_time_cooldown_timer.start()
+
 motd_done = False
 motd = motd_parser.select_random_motd(motds_data)
 motd = motd['motd']
@@ -134,62 +123,46 @@ for motd_json in motds_data:
         print('appending', motd_json)
         new_motds.append(motd_json)
         print('new motds', new_motds)
+
+rtc = RTC()
+connect.do_connect()
+settime()
+
 try:    
     while True:
         now = rtc.datetime()
-        
+        #webserver
+        new_motd = motd_reciever_copy_2.web_server(s, clients)
+        if new_motd is not None:
+            new_motds.append(new_motd)
+
+        #handle alarm
+        if switch.get_state() and mode == 'home':
+            myalarm.update(now)
+
+        if myalarm.is_active:
+            display_on = True
+
+        #ntp
+        hour = now[4]
+        minute = now[5]
+        if hour == 2+12 and minute == 5 and refresh_time_cooldown_timer.finished():
+            print("setting time via ntp...")
+            settime()
+            refresh_time_cooldown_timer = Neotimer(70_000)
+            refresh_time_cooldown_timer.start()
+
+        switch.update()
         if mode == 'home':
             for btn in home_buttons:
                 btn.update()
 
-            if myalarm.is_active and home_cmd == 'toggle_light':
+            if home_cmd == 'toggle_light' and myalarm.is_active:
                 myalarm.stop()
                 home_cmd = None
                 continue
-            
-            if motd_done:
-                print("motd done, selecting random one")
-                motd = motd_parser.select_random_motd(motds_data)
-                motd = motd['motd']
-                motd_len = bally_mini.measure_text(motd)
-            
-            scroller += 1
-            if scroller >= motd_len + display.width + 10:
-                motd_done = True
-                scroller = 0
-            else:
-                motd_done = False
-            
-            if home_cmd == 'read_msg' and len(new_motds) != 0:
-                with open('motds.json', 'r') as f:
-                    all_motds = json.load(f)
 
-                for motd in all_motds:
-                    print(new_motds)
-                    if motd['id'] == new_motds[0]['id']:
-                        motd['new'] = False
-                        break
-                motd = new_motds[0]
-                new_motds.pop(0)
-                motd = motd['motd']
-                motd_len = bally_mini.measure_text(motd)
-                scroller = 0
-                
-                
-                with open('motds.json', 'w') as f:
-                    json.dump(all_motds, f)
-                
-            if len(new_motds) != 0:
-                display_mail = True
-            else:
-                display_mail = False
-
-            displaystates.home(usb_power(), switch.get_state(), check_connection(), display_mail, motd, scroller ,now)
-            
-            if home_cmd == 'goto_alarm':
-                mode = 'set_alarm'
-            
-            if home_cmd == 'toggle_light':
+            elif home_cmd == 'toggle_light':
                 print("toggling light...")
                 try:
                     response = urequests.get('http://192.168.1.45/toggle_light')
@@ -201,8 +174,58 @@ try:
                     if e.errno == errno.ECONNRESET:
                         print("reading response failed")
                 else:
-                    response.close()
+                    response.close()  
 
+            elif home_cmd == 'goto_alarm':
+                mode = 'set_alarm'
+                display_on = True
+
+            elif home_cmd == 'toggle_display':
+                display_on = not display_on
+                if display_on == True:
+                    display.wake()
+                else:
+                    display.sleep()
+                
+            if home_cmd == 'read_msg' and len(new_motds) != 0:
+                with open('motds.json', 'r') as f:
+                    all_motds = json.load(f)
+
+                for motd in all_motds:
+                    print(new_motds)
+                    if motd['id'] == new_motds[0]['id']:
+                        motd['new'] = False
+                        break
+
+                motd = new_motds[0]
+                new_motds.pop(0)
+                motd = motd['motd']
+                motd_len = bally_mini.measure_text(motd)
+                scroller = 0
+                
+                with open('motds.json', 'w') as f:
+                    json.dump(all_motds, f)
+
+            if motd_done:
+                print("motd done, selecting random one")
+                motd = motd_parser.select_random_motd(motds_data)
+                motd = motd['motd']
+                motd_len = bally_mini.measure_text(motd)
+
+            scroller += 1
+            if scroller >= motd_len + display.width + 10:
+                motd_done = True
+                scroller = 0
+            else:
+                motd_done = False
+
+            if len(new_motds) != 0:
+                display_mail = True
+            else:
+                display_mail = False
+
+            displaystates.home(usb_power(), switch.get_state(), check_connection(), display_mail, motd, scroller, now)
+        
             home_cmd = None
 
         elif mode == 'set_alarm':
@@ -231,27 +254,7 @@ try:
                 firsttime_alm = True
                 alarm_hour = timeutils.to_military_time(alarm_hour, alarm_ampm)
                 myalarm.edit_time(alarm_hour, alarm_minute)
-
-        
-        #webserver
-        new_motd = motd_reciever_copy_2.web_server(s, clients)
-        if new_motd is not None:
-            new_motds.append(new_motd)
-
-        #handle alarm
-        if switch.get_state() and mode == 'home':
-            myalarm.update(now)
-
-        #ntp
-        hour = now[4]
-        minute = now[5]
-        if hour == 2+12 and minute == 5 and refresh_time_cooldown_timer.finished():
-            print("setting time via ntp...")
-            settime()
-            refresh_time_cooldown_timer = Neotimer(70_000)
-            refresh_time_cooldown_timer.start()
-
-        switch.update()
+                myalarm.edit_ringtone(ringtone_index)
 
 finally:
     print("doing cleanup")
@@ -259,7 +262,3 @@ finally:
     displaystates.display.cleanup()
     motor.stop()
     print("cleanup success!")
-
-
-
-    

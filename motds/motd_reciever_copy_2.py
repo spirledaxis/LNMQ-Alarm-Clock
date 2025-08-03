@@ -13,10 +13,9 @@ def web_setup():
     s.setblocking(False)
     clients = []  # keep track of open client sockets
     return s, clients
+
 #welcome to indentation hell
 def web_server(s, clients):
-    # your display logic here (non-blocking)
-    # your motor logic here (non-blocking)
 
     # Check for new incoming connections
     rlist, _, _ = select.select([s], [], [], 0)

@@ -22,13 +22,13 @@ bot = Client(intents=Intents.DEFAULT, send_command_tracebacks=True)
     opt_type=OptionType.BOOLEAN,
     required=True
 )
-@slash_option(
-    name='notify',
-    description='Alarm clock will display notification, so Neel will see it faster',
-    opt_type=OptionType.BOOLEAN,
-)
+# @slash_option(
+#     name='notify',
+#     description='Alarm clock will display notification, so Neel will see it faster',
+#     opt_type=OptionType.BOOLEAN,
+# )
 
-async def send_message(ctx: SlashContext, message: str, anonymity, notify=True):
+async def send_message(ctx: SlashContext, message: str, anonymity):
     if anonymity:
         username = ctx.author.display_name
     else:
@@ -36,11 +36,11 @@ async def send_message(ctx: SlashContext, message: str, anonymity, notify=True):
     
     message = message.replace(' ', '+') 
     try:
-        subprocess.run([f"curl", f"http://{config.ip}/?motd={message}&author={username}&notify={notify}"], check=True)
+        subprocess.run([f"curl", f"http://{config.ip}/?motd={message}&author={username}"], check=True)
     except subprocess.CalledProcessError as e:
         embed = interactions.Embed(
             title="Error sending the message",
-            description=f'The alarm clock may be on low battery or shut off.',
+            description=f'The alarm clock may be on low battery or shut off. Try again later!',
             color=BrandColors.RED
         )
         print(e)

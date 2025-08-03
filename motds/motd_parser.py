@@ -49,9 +49,6 @@ def select_random_motd(data):
     print(motd)
     return motd
 
-
-
-
 if __name__ == '__main__':
     data = fetch_data()
     print(data)

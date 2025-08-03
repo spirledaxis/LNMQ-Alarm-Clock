@@ -3,13 +3,14 @@ from machine import Pin, PWM #type: ignore
 from lib.neotimer import Neotimer
 import config
 from lib.picodfplayer import DFPlayer
-
+from displaystates import display
 
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq):
         self.left_pin = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
         self.right_pin = PWM(Pin(right_pin), pwm_freq, duty_u16=0)
         self.is_idle = True
+        self.ready = False
         self.movement_increment = -1
         self.timer = Neotimer(0)
     
@@ -39,12 +40,17 @@ class Motor:
         """
         self.movement = movement
         self.timer.start()
+        self.ready = True
 
     def do_movement(self):
+        if not self.ready:
+            return
+        
         if self.timer.finished():
             if self.movement_increment + 1 >= len(self.movement): 
                 print("end of movement")
                 self.movement_increment = -1
+                self.ready = False
                 self.stop()
             else:
                 self.movement_increment += 1
@@ -52,8 +58,6 @@ class Motor:
                 self.timer = Neotimer(dur_ms)
                 self.timer.start()
                 self._interact(cmd, speed)       
-        
-        
         
     def movement_len_ms(self, movement):
         time_ms = 0
@@ -67,10 +71,7 @@ class Motor:
         self.left_pin.duty_u16(0)
         self.right_pin.duty_u16(0)
         self.is_idle = True
-    
-    def reset_increment(self):
         self.movement_increment = -1
-
 
 
 class Alarm:
@@ -96,6 +97,7 @@ class Alarm:
         now_minute = now[5]
 
         if now_hour == self.hour and now_minute == self.minute and not self.cooldown:
+            display.wake()
             print("alarm should go off now")
             self.cooldown = True 
             self.cooldown_timer = Neotimer(70_000)
@@ -103,18 +105,15 @@ class Alarm:
             self.is_active = True
             self.speaker.playTrack(1, self.ringtone)
             self.motor.set_movement(self.motor_movement)
-
-    
+   
         if self.cooldown_timer.finished():
             self.cooldown = False
-
-       
+ 
         if self.is_active:
             if not self.speaker.queryBusy():
                 print("going at it again")
                 self.speaker.playTrack(1, self.ringtone)
                 self.motor.stop() #stop the motor in the case that the movement is longer than the audio
-                self.motor.reset_increment()
             self.motor.do_movement()
 
     def stop(self):
@@ -127,16 +126,21 @@ class Alarm:
         self.is_active = False
 
     def fire(self):
+        "Use this to fire the alarm whenever. Bypasses cooldown, and doesn't repeat."
         self.is_active = True
         print("firing...")
-        "Use this to fire the alarm whenever. Bypasses cooldown, and doesn't repeat."
-
+       
     def edit_time(self, hour, minute):
         "change when the alarm object will fire"
         self.hour = hour
         self.minute = minute
        
+    def edit_ringtone(self, ringtone:int):
+        self.ringtone = ringtone
 
+    def edit_motor_movement(self, movement):
+        self.motor_movement = movement
+        
 class Button:
     def __init__(self, pin, callback, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -146,6 +150,7 @@ class Button:
         self.prev_state = 0
         self.is_debounced = False
         self.press_counter = 0
+
     def update(self):
         if self.debounce_timer.debounce_signal(not self.pin.value()):
             self.is_debounced = True
@@ -166,6 +171,7 @@ class Button:
             self.is_debounced = False
 
         self.prev_state = self.state
+     
         
 class Switch:
     def __init__(self, pin, debounce_ms=100):
