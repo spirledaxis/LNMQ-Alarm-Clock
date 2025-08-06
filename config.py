@@ -1,6 +1,12 @@
+from machine import SPI, Pin #type: ignore
+from lib.ssd1309 import Display
+from components import Motor
+from lib.picodfplayer import DFPlayer
+
 #motor
 motor_l = 19
 motor_r = 18
+motor = Motor(motor_l, motor_r, 2000)
 
 #dfplayer
 rx = 17
@@ -8,6 +14,7 @@ tx = 16
 transistor = 21
 busy = 20
 uarto_channel_df = 0
+speaker = DFPlayer(uarto_channel_df, tx, rx, busy, transistor)
 #display
 """
 pins from gnd-cs
@@ -19,13 +26,15 @@ res
 dc
 cs
 """
-
 sck = 14
 sda = 15
 res = 13
 dc = 12
 cs = 11 
 spi_channel_disp = 1
+
+spi = SPI(spi_channel_disp, baudrate=10_000_000, sck=Pin(sck), mosi=Pin(sda))
+display = Display(spi, dc=Pin(dc), cs=Pin(cs), rst=Pin(res), offscreen_warnings=False, flip=True)
 
 #inputs
 snd_fx_l = 8 #these are also paired
@@ -41,3 +50,5 @@ switch = 6
 
 #other
 ip = '192.168.1.51'
+display_timeout_min = 3
+alarm_timeout_min = 5

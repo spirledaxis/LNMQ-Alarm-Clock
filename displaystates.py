@@ -5,7 +5,7 @@ import config
 from lib.ssd1309 import Display
 from lib.xglcd_font import XglcdFont
 import json
-
+from config import display
 rtc = RTC()
 bell_icon = bytearray([0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
 plug_icon = bytearray([0x00, 0x10, 0xf8, 0x1f, 0x1f, 0xf8, 0x10, 0x00])
@@ -22,8 +22,7 @@ no_wifi_icon = framebuf.FrameBuffer(no_wifi_icon, 8, 8, framebuf.MONO_VLSB)
 mail_icon = framebuf.FrameBuffer(mail_icon, 8, 8, framebuf.MONO_VLSB)
 
 #origin in bottom right
-spi = SPI(config.spi_channel_disp, baudrate=10_000_000, sck=Pin(config.sck), mosi=Pin(config.sda))
-display = Display(spi, dc=Pin(config.dc), cs=Pin(config.cs), rst=Pin(config.res), offscreen_warnings=False, flip=True)
+
 # i2c = I2C(1, sda=Pin(14), scl=Pin(15), freq=400_000)
 # display = Display(i2c=i2c, offscreen_warnings=True)
 print("Loading fonts.  Please wait.")
@@ -31,8 +30,8 @@ timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
 now = rtc.datetime()
 
-motd = 'hello world!'
 
+motd = 'hello world!'
 motd_len = bally.measure_text(motd)
 scroller = 0
 display.set_contrast(0)
@@ -54,6 +53,9 @@ def home(usb_power, switch_state, wifi_state, display_mail, motd, motd_pos, now)
     #1 is tuesday, supposedely. Idk if the tuple is weird or my function is cooked, thats why theres +1 for now. Fix later.
     date_text = f'{timeutils.daynum_to_daystr(day_name_int+1)} | {timeutils.monthnum_to_monthstr(month)} {month_day}'
     date_text_len = bally.measure_text(date_text)
+    if date_text_len >= 128:
+        date_text = f'{timeutils.daynum_to_daystr(day_name_int+1)} | {timeutils.monthnum_to_monthabbr(month)} {month_day}'
+        date_text_len = bally.measure_text(date_text)
 
     #origin is in the bottom right
 
@@ -142,7 +144,7 @@ def set_alarm(hour, minute, ampm, ringtone_index, ringtone_json, selection, acti
 
     elif action == 'rev':
         if selection == 'minute':
-            if minute - 5 <= 0:
+            if minute - 5 < 0:
                 minute = 55
             else:
                 minute -= 5

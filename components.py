@@ -3,7 +3,6 @@ from machine import Pin, PWM #type: ignore
 from lib.neotimer import Neotimer
 import config
 from lib.picodfplayer import DFPlayer
-from displaystates import display
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq):
         self.left_pin = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
@@ -77,10 +76,13 @@ class Motor:
         self.ready = True
 
 class Alarm:
-    def __init__(self, hour, minute, motor_movement, ringtone, motor, speaker):
+    def __init__(self, hour, minute, timeout_s, enabled, motor_movement, ringtone, motor, speaker, display):
         """use military time for the hour. """
         self.hour = hour
         self.minute = minute
+        self.timeout_s = timeout_s
+        self.timeout_timer = Neotimer(self.timeout_s*1000)
+        self.enabled = enabled
         self.motor_movement = motor_movement
         self.ringtone = ringtone
         self.cooldown = False #cooldown logic so it doesn't go off for the entire minute
@@ -89,7 +91,8 @@ class Alarm:
         self.is_active = False
         self.motor = motor
         self.speaker = speaker
-      
+        self.display = display
+        self.motor.set_movement(self.motor_movement)
     def update(self, now):
         """
         Args:
@@ -99,8 +102,8 @@ class Alarm:
         now_hour = now[4]
         now_minute = now[5]
 
-        if now_hour == self.hour and now_minute == self.minute and not self.cooldown:
-            display.wake()
+        if now_hour == self.hour and now_minute == self.minute and not self.cooldown and self.enabled:
+            self.display.wake()
             print("alarm should go off now")
             self.cooldown = True 
             self.cooldown_timer = Neotimer(70_000)
@@ -108,10 +111,15 @@ class Alarm:
             self.is_active = True
             self.speaker.playTrack(1, self.ringtone)
             self.motor.set_movement(self.motor_movement)
-   
+            self.timeout_timer.start()
+
         if self.cooldown_timer.finished():
             self.cooldown = False
- 
+
+        if self.timeout_timer.finished():
+            print("timeout reached")
+            self.stop()
+
         if self.is_active:
             if not self.speaker.queryBusy():  
                 print("going at it again")
@@ -119,6 +127,7 @@ class Alarm:
                 self.speaker.playTrack(1, self.ringtone)
                 self.motor.start()
             self.motor.do_movement()
+        
 
     def stop(self):
         print("stopping...")
@@ -127,24 +136,16 @@ class Alarm:
         
         self.speaker.pause()
         self.motor.stop()
+        self.timeout_timer.stop()
+        self.timeout_timer.restart()
         self.is_active = False
 
     def fire(self):
         "Use this to fire the alarm whenever. Bypasses cooldown, and doesn't repeat."
         self.is_active = True
         print("firing...")
-       
-    def edit_time(self, hour, minute):
-        "change when the alarm object will fire"
-        self.hour = hour
-        self.minute = minute
-       
-    def edit_ringtone(self, ringtone:int):
-        self.ringtone = ringtone
 
-    def edit_motor_movement(self, movement):
-        self.motor_movement = movement
-        
+       
 class Button:
     def __init__(self, pin, callback, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -239,7 +240,7 @@ if __name__ == '__main__':
 
     timer = Neotimer(2000)
     speaker = DFPlayer(config.uarto_channel_df, config.tx, config.rx, config.busy, config.transistor)
-    alarm = Alarm(hour, minute, exciting_movement, 13, motor, speaker)
+    alarm = Alarm(hour, minute, exciting_movement, 9, motor, speaker)
     try:
         while True:
             alarm.update(now)

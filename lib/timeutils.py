@@ -43,6 +43,34 @@ def monthnum_to_monthstr(monthnum):
         return 'december'
     else:
         raise ValueError('Not a valid monthnum, should be between 0-6')
+    
+def monthnum_to_monthabbr(monthnum):
+    if monthnum == 1:
+        return 'jan'
+    elif monthnum == 2:
+        return 'feb'
+    elif monthnum == 3:
+        return 'mar'
+    elif monthnum == 4:
+        return 'apr'
+    elif monthnum == 5:
+        return 'may'
+    elif monthnum == 6:
+        return 'jun'
+    elif monthnum == 7:
+        return 'jul'
+    elif monthnum == 8:
+        return 'aug'
+    elif monthnum == 9:
+        return 'sep'
+    elif monthnum == 10:
+        return 'oct'
+    elif monthnum == 11:
+        return 'nov'
+    elif monthnum == 12:
+        return 'dec'
+    else:
+        raise ValueError('Not a valid month number; must be 1–12')
 
 def convert_to_ampm(hour):
     """convert military hour to hour, also finds am/pm"""
