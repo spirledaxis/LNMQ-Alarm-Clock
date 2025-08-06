@@ -29,15 +29,13 @@ display = Display(spi, dc=Pin(config.dc), cs=Pin(config.cs), rst=Pin(config.res)
 print("Loading fonts.  Please wait.")
 timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
-bally_mini = XglcdFont('Bally5x8.c', 5, 8)
 now = rtc.datetime()
 
 motd = 'hello world!'
 
-motd_len = bally_mini.measure_text(motd)
+motd_len = bally.measure_text(motd)
 scroller = 0
 display.set_contrast(0)
-
 
 def home(usb_power, switch_state, wifi_state, display_mail, motd, motd_pos, now):
     assert type(motd) is str
@@ -95,7 +93,7 @@ def home(usb_power, switch_state, wifi_state, display_mail, motd, motd_pos, now)
         display.fill_rectangle(x=((display.width-time_len) // 4) - 8, y=(display.height // 2) - 8, w=8, h=8, invert=True)
 
     #motd
-    display.draw_text(motd_pos, ((display.height // 2) + time_height // 2) + bally_mini.height // 2 - 2,
+    display.draw_text(motd_pos, ((display.height // 2) + time_height // 2) + bally.height // 2 - 2,
                     motd, bally, rotate=180)
     
     display.present()
@@ -203,7 +201,7 @@ def set_alarm(hour, minute, ampm, ringtone_index, ringtone_json, selection, acti
     display.draw_text(x, y, time_display, timefont, rotate=180)
     
     ringtone_text = f"{ringtone_index}. {ringtone_json[ringtone_index-1]['description']}"
-    ringtone_y = display.height // 2 + time_height // 2 + bally_mini.height // 2
+    ringtone_y = display.height // 2 + time_height // 2 + bally.height // 2
     display.draw_text((display.width + time_len) // 2, ringtone_y,
                 ringtone_text, bally, rotate=180)
     

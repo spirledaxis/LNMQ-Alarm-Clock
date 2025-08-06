@@ -17,7 +17,7 @@ from lib.picodfplayer import DFPlayer
 from lib.ntptime import settime
 from motds import motd_parser
 from connect import check_connection
-from displaystates import bally_mini, display
+from displaystates import bally, display
 from motds import motd_reciever_copy_2
 import connect
 import config
@@ -27,37 +27,21 @@ import json
 #motor setup
 motor = Motor(config.motor_l, config.motor_r, 2000)
 custom_movement = [
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
-    ('r', 1000, 90),   # move right for 0.5s at 90% speed
-    ('w', 500, 0),    # wait for 0.2s
-    ('l', 1000, 90),  # move left for 0.7s at full speed
+    ('r', 400, 100),  # quick burst right at full speed
+    ('l', 400, 100),  # quick burst left at full speed
+    ('r', 300, 100),  # shorter burst right
+    ('l', 300, 100),  # shorter burst left
+    ('w', 200, 0),    # brief pause
+    ('r', 600, 80),   # longer slide right at slightly lower speed
+    ('l', 600, 80),   # longer slide left
+    ('w', 100, 0),    # quick pause
+    ('r', 200, 100),  # quick snap right
+    ('l', 200, 100),  # quick snap left
+    ('w', 300, 0),    # pause before finish
+    ('r', 500, 90),   # final strong move right
+    ('l', 500, 90)    # final strong move left
 ]
+
 
 speaker = DFPlayer(config.uarto_channel_df, config.tx, config.rx, config.busy, config.transistor)
 
@@ -114,7 +98,7 @@ refresh_time_cooldown_timer.start()
 motd_done = False
 motd = motd_parser.select_random_motd(motds_data)
 motd = motd['motd']
-motd_len = bally_mini.measure_text(motd)
+motd_len = bally.measure_text(motd)
 s, clients = motd_reciever_copy_2.web_setup()
 new_motds = []
 for motd_json in motds_data:
@@ -173,6 +157,8 @@ try:
                 except OSError as e:
                     if e.errno == errno.ECONNRESET:
                         print("reading response failed")
+                except Exception:
+                    print("Didn't work. Maybe the server is down?")
                 else:
                     response.close()  
 
@@ -181,12 +167,13 @@ try:
                 display_on = True
 
             elif home_cmd == 'toggle_display':
+                print('toggling display')
                 display_on = not display_on
                 if display_on == True:
                     display.wake()
                 else:
                     display.sleep()
-                
+
             if home_cmd == 'read_msg' and len(new_motds) != 0:
                 with open('motds.json', 'r') as f:
                     all_motds = json.load(f)
@@ -199,18 +186,22 @@ try:
 
                 motd = new_motds[0]
                 new_motds.pop(0)
-                motd = motd['motd']
-                motd_len = bally_mini.measure_text(motd)
+                motd = f"{motd['motd']} @{motd['author']}"
+                motd_len = bally.measure_text(motd)
                 scroller = 0
                 
                 with open('motds.json', 'w') as f:
                     json.dump(all_motds, f)
 
+                with open('motds.json', 'r') as f:
+                    motds_data = json.load(f)
+
             if motd_done:
-                print("motd done, selecting random one")
+                print("motd done, selecting random one out of")
+                print(motds_data)
                 motd = motd_parser.select_random_motd(motds_data)
                 motd = motd['motd']
-                motd_len = bally_mini.measure_text(motd)
+                motd_len = bally.measure_text(motd)
 
             scroller += 1
             if scroller >= motd_len + display.width + 10:

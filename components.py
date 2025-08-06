@@ -4,7 +4,6 @@ from lib.neotimer import Neotimer
 import config
 from lib.picodfplayer import DFPlayer
 from displaystates import display
-
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq):
         self.left_pin = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
@@ -15,7 +14,6 @@ class Motor:
         self.timer = Neotimer(0)
     
     def _interact(self, cmd, speed):
-
         #speed to duty cycle (speed param is percentage)
         duty_cycle = int((65535*speed) / 100)
 
@@ -50,15 +48,14 @@ class Motor:
             if self.movement_increment + 1 >= len(self.movement): 
                 print("end of movement")
                 self.movement_increment = -1
-                self.ready = False
-                self.stop()
+
             else:
                 self.movement_increment += 1
                 cmd, dur_ms, speed = self.movement[self.movement_increment]
                 self.timer = Neotimer(dur_ms)
                 self.timer.start()
                 self._interact(cmd, speed)       
-        
+
     def movement_len_ms(self, movement):
         time_ms = 0
         for _, dur_ms, _, in movement:
@@ -71,8 +68,13 @@ class Motor:
         self.left_pin.duty_u16(0)
         self.right_pin.duty_u16(0)
         self.is_idle = True
+        self.ready = False
+        self.timer = Neotimer(0)
+        self.timer.start()
         self.movement_increment = -1
 
+    def start(self):
+        self.ready = True
 
 class Alarm:
     def __init__(self, hour, minute, motor_movement, ringtone, motor, speaker):
@@ -83,6 +85,7 @@ class Alarm:
         self.ringtone = ringtone
         self.cooldown = False #cooldown logic so it doesn't go off for the entire minute
         self.cooldown_timer = Neotimer(0)
+        self.alarm_restart_timer = Neotimer(1000)
         self.is_active = False
         self.motor = motor
         self.speaker = speaker
@@ -110,10 +113,11 @@ class Alarm:
             self.cooldown = False
  
         if self.is_active:
-            if not self.speaker.queryBusy():
+            if not self.speaker.queryBusy():  
                 print("going at it again")
-                self.speaker.playTrack(1, self.ringtone)
                 self.motor.stop() #stop the motor in the case that the movement is longer than the audio
+                self.speaker.playTrack(1, self.ringtone)
+                self.motor.start()
             self.motor.do_movement()
 
     def stop(self):
@@ -204,20 +208,41 @@ class Switch:
         return self.stable_state
     
 if __name__ == '__main__':
+    print('ehlo')
+    from machine import RTC
+    rtc = RTC()
+    now = rtc.datetime()
+    hour = now[4]
+    minute = now[5]
     from utime import sleep
     motor = Motor(config.motor_l, config.motor_r, 2000)
     custom_movement = [
-    ('l', 200, 85),    # move left for 0.8s at 85% speed
+    ('l', 20000, 85),    # move left for 0.8s at 85% speed
     ('r', 800, 85),
     ('r', 400, 85),
 ]
+    exciting_movement = [
+    ('r', 400, 100),  # quick burst right at full speed
+    ('l', 400, 100),  # quick burst left at full speed
+    ('r', 300, 100),  # shorter burst right
+    ('l', 300, 100),  # shorter burst left
+    ('w', 200, 0),    # brief pause
+    ('r', 600, 80),   # longer slide right at slightly lower speed
+    ('l', 600, 80),   # longer slide left
+    ('w', 100, 0),    # quick pause
+    ('r', 200, 100),  # quick snap right
+    ('l', 200, 100),  # quick snap left
+    ('w', 300, 0),    # pause before finish
+    ('r', 500, 90),   # final strong move right
+    ('l', 500, 90)    # final strong move left
+]
 
-
-    motor.set_movement(custom_movement)
+    timer = Neotimer(2000)
+    speaker = DFPlayer(config.uarto_channel_df, config.tx, config.rx, config.busy, config.transistor)
+    alarm = Alarm(hour, minute, exciting_movement, 13, motor, speaker)
     try:
         while True:
-            motor.do_movement()
-        
+            alarm.update(now)
     finally:
         motor.stop()
-
+        speaker.cleanup()
