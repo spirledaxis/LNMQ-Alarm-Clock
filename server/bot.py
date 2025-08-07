@@ -1,14 +1,16 @@
-#to be run on the server, rather than the pico
+#to be run on a docker container
 import interactions
 from interactions import slash_command, slash_option, OptionType, SlashContext, Client, Intents, BrandColors
 import subprocess
 from bot_token import token
-from ip import ip
 import re
 import textwrap
 servers = [
-    1120883193063677972
+    1120883193063677972,
+    1403077958943506612,
 ]
+
+pico_ip = '192.168.1.51'
 bot = Client(intents=Intents.DEFAULT, send_command_tracebacks=True)
 
 @slash_command(name='message', scopes=servers)
@@ -19,25 +21,20 @@ bot = Client(intents=Intents.DEFAULT, send_command_tracebacks=True)
         required=True
 )
 @slash_option(
-    name='anonymity',
+    name='show_name',
     description='whether or not your name is attached to the message',
     opt_type=OptionType.BOOLEAN,
-    required=True
+    required=False
 )
-# @slash_option(
-#     name='notify',
-#     description='Alarm clock will display notification, so Neel will see it faster',
-#     opt_type=OptionType.BOOLEAN,
-# )
 
-
-async def send_message(ctx: SlashContext, message: str, anonymity):
-    if not anonymity:
+async def send_message(ctx: SlashContext, message: str, show_name=True):
+    if show_name:
         username = ctx.author.display_name
     else:
         username = 'anonymous'
 
     message = message.strip()
+    message = " ".join(message.split())
     regex = r'[^ -~]| {2,}|_'
     matches_regex = re.findall(regex, message)
     if matches_regex != []:
@@ -78,7 +75,8 @@ async def send_message(ctx: SlashContext, message: str, anonymity):
         return
     
     try:
-        subprocess.run([f"curl", f"http://{ip}/?motd={message}&author={username}"], check=True)
+        message = message.replace(' ', '+')
+        subprocess.run([f"curl", f"http://{pico_ip}/?motd={message}&author={username}"], check=True)
     except subprocess.CalledProcessError as e:
         embed = interactions.Embed(
             title="Error sending the message",
@@ -86,7 +84,7 @@ async def send_message(ctx: SlashContext, message: str, anonymity):
             color=BrandColors.RED
         )
         with open('log.log', 'a') as f:
-            f.write(e + '\n\n')
+            f.write(f'{e}\n')
     
         await ctx.send(embed=embed)
     except:
@@ -96,7 +94,7 @@ async def send_message(ctx: SlashContext, message: str, anonymity):
             color=BrandColors.RED
         )
         with open('log.log', 'a') as f:
-            f.write(e + '\n\n')
+            f.write(f'{e}\n')
 
         await ctx.send(embed=embed)
     else:
@@ -104,8 +102,9 @@ async def send_message(ctx: SlashContext, message: str, anonymity):
         title="Message sent!",
         description="Sent message successfully!",
         color=BrandColors.GREEN
-    )
-    await ctx.send(embed=embed)
+        )
+        await ctx.send(embed=embed)
+    
     return
 
 bot.start(token)

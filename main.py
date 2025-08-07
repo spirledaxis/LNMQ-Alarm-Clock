@@ -158,7 +158,7 @@ display_on = True
 scroller = 0
 usb_power = Pin('WL_GPIO2', Pin.IN)
 switch = Switch(config.switch)
-myalarm = Alarm(11, 23, config.alarm_timeout_min, True, custom_movement, alarm_ringtone, motor, speaker, display)
+myalarm = Alarm(11, 23, config.alarm_timeout_min*60, True, custom_movement, alarm_ringtone, motor, speaker, display)
 #myalarm = Alarm(alarm_hour, alarm_minute, 120, True, custom_movement, alarm_ringtone, motor, speaker, display)
 refresh_time_cooldown_timer = Neotimer(0)
 refresh_time_cooldown_timer.start()
@@ -250,11 +250,14 @@ try:
                     display_timer.restart()
                     display.sleep()
                     continue
+            
+            if not display_on:
+                continue
 
-            elif home_cmd == 'goto_alarm':
+            if home_cmd == 'goto_alarm':
                 mode = 'set_alarm'
 
-            if home_cmd == 'read_msg' and len(new_motds) != 0:
+            elif home_cmd == 'read_msg' and len(new_motds) != 0:
                 with open('motds.json', 'r') as f:
                     all_motds = json.load(f)
 
