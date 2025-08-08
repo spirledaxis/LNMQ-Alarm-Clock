@@ -154,7 +154,6 @@ with open('alarms.json', 'r') as f:
     alarm_ringtone = alarm['ringtone']
 
 mode = 'home'
-display_on = True
 scroller = 0
 usb_power = Pin('WL_GPIO2', Pin.IN)
 switch = Switch(config.switch)
@@ -197,12 +196,14 @@ try:
         else:
             myalarm.enabled = False
 
-        if display_timer.finished() and display_on:
+        if display_timer.finished() and display.on:
             print("display got timed out")
-            display_on = False
             display.sleep()
             display_timer.restart()
 
+        if home_cmd is not None:
+            display_timer.restart()
+            
         #ntp
         hour = now[4]
         minute = now[5]
@@ -241,8 +242,7 @@ try:
             elif home_cmd == 'toggle_display':
                 home_cmd = None
                 print('toggling display')
-                display_on = not display_on
-                if display_on == True:
+                if not display.on:
                     display.wake()
                     display_timer.start()
 
@@ -250,8 +250,8 @@ try:
                     display_timer.restart()
                     display.sleep()
                     continue
-            
-            if not display_on:
+            #Important point. Past here, in home mode, no processing happens when display is off.
+            if not display.on:
                 continue
 
             if home_cmd == 'goto_alarm':

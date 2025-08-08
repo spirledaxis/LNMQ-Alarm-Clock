@@ -101,6 +101,7 @@ class Display(object):
         self.monoFB = FrameBuffer(self.mono_image, width, height, MONO_VLSB)
         self.clear_buffers()
         self.reset()
+        self.on = True
         # Send initialization commands
         for cmd in (
                     self.DISPLAY_OFF,
@@ -886,7 +887,7 @@ class Display(object):
     def sleep(self):
         """Put display to sleep."""
         self.write_cmd(self.DISPLAY_OFF)
-
+        self.on = False
     def scroll_start(self):
         """Activates scrolling after setup."""
         self.write_cmd(self.SCROLL_ACTIVATE)
@@ -1003,7 +1004,8 @@ class Display(object):
     def wake(self):
         """Wake display from sleep."""
         self.write_cmd(self.DISPLAY_ON)
-
+        self.on = True
+        
     def write_cmd_i2c(self, command, *args):
         """Write command to display using I2C.
 
