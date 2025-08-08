@@ -76,7 +76,7 @@ class Motor:
         self.ready = True
 
 class Alarm:
-    def __init__(self, hour, minute, timeout_s, enabled, motor_movement, ringtone, motor, speaker, display):
+    def __init__(self, hour, minute, timeout_s, enabled, motor_movement, ringtone, motor, speaker, display, display_timeout):
         """use military time for the hour. """
         self.hour = hour
         self.minute = minute
@@ -92,6 +92,7 @@ class Alarm:
         self.motor = motor
         self.speaker = speaker
         self.display = display
+        self.display_timeout = display_timeout
         self.motor.set_movement(self.motor_movement)
     def update(self, now):
         """
@@ -103,6 +104,7 @@ class Alarm:
         now_minute = now[5]
 
         if now_hour == self.hour and now_minute == self.minute and not self.cooldown and self.enabled:
+            self.display_timeout.restart()
             self.display.wake()
             print("alarm should go off now")
             self.cooldown = True 
@@ -216,34 +218,16 @@ if __name__ == '__main__':
     hour = now[4]
     minute = now[5]
     from utime import sleep
-    motor = Motor(config.motor_l, config.motor_r, 2000)
+    motor = Motor(config.motor_l, config.motor_r, 20_000)
     custom_movement = [
-    ('l', 20000, 85),    # move left for 0.8s at 85% speed
+    ('l', 20000, 80),    # move left for 0.8s at 85% speed
     ('r', 800, 85),
     ('r', 400, 85),
-]
-    exciting_movement = [
-    ('r', 400, 100),  # quick burst right at full speed
-    ('l', 400, 100),  # quick burst left at full speed
-    ('r', 300, 100),  # shorter burst right
-    ('l', 300, 100),  # shorter burst left
-    ('w', 200, 0),    # brief pause
-    ('r', 600, 80),   # longer slide right at slightly lower speed
-    ('l', 600, 80),   # longer slide left
-    ('w', 100, 0),    # quick pause
-    ('r', 200, 100),  # quick snap right
-    ('l', 200, 100),  # quick snap left
-    ('w', 300, 0),    # pause before finish
-    ('r', 500, 90),   # final strong move right
-    ('l', 500, 90)    # final strong move left
-]
-
-    timer = Neotimer(2000)
-    speaker = DFPlayer(config.uarto_channel_df, config.tx, config.rx, config.busy, config.transistor)
-    alarm = Alarm(hour, minute, exciting_movement, 9, motor, speaker)
+    ]
+    motor.set_movement(custom_movement)
     try:
         while True:
-            alarm.update(now)
+            motor.do_movement()
     finally:
         motor.stop()
-        speaker.cleanup()
+        
