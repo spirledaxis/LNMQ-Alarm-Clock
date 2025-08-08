@@ -157,7 +157,9 @@ mode = 'home'
 scroller = 0
 usb_power = Pin('WL_GPIO2', Pin.IN)
 switch = Switch(config.switch)
-myalarm = Alarm(11, 23, config.alarm_timeout_min*60, True, custom_movement, alarm_ringtone, motor, speaker, display)
+display_timer = Neotimer(config.display_timeout_min*60_000) 
+display_timer.start()
+myalarm = Alarm(10, 39, config.alarm_timeout_min*60, True, custom_movement, alarm_ringtone, motor, speaker, display, display_timer)
 #myalarm = Alarm(alarm_hour, alarm_minute, 120, True, custom_movement, alarm_ringtone, motor, speaker, display)
 refresh_time_cooldown_timer = Neotimer(0)
 refresh_time_cooldown_timer.start()
@@ -178,8 +180,7 @@ for motd_json in motds_data:
 rtc = RTC()
 connect.do_connect()
 settime()
-display_timer = Neotimer(config.display_timeout_min*60_000) 
-display_timer.start()
+
 try:    
     while True:
         now = rtc.datetime()
@@ -200,10 +201,11 @@ try:
             print("display got timed out")
             display.sleep()
             display_timer.restart()
-
-        if home_cmd is not None:
+            mode = 'home'
+    
+        if home_cmd is not None or alm_cmd is not None:
             display_timer.restart()
-            
+
         #ntp
         hour = now[4]
         minute = now[5]
@@ -329,7 +331,7 @@ try:
                 alarm_hour = timeutils.to_military_time(alarm_hour, alarm_ampm)
                 myalarm.hour = alarm_hour
                 myalarm.minute = alarm_minute
-                myalarm.ringtone = alarm_ringtone
+                myalarm.ringtone = ringtone_index
 
 
 finally:
