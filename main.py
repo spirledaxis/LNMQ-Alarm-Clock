@@ -95,7 +95,7 @@ import connect
 import displaystates
 import json
 from config import motor, speaker
-
+from movements import *
 #motor setup
 
 custom_movement = [
@@ -145,6 +145,14 @@ firsttime_alm = True
 with open('motds.json', 'r') as f:
     motds_data = json.load(f)
 
+def ringtone_to_movement(alarm, _ringtone_index):
+    if _ringtone_index == 13:
+        alarm.motor_movement = freedom_dive
+    elif _ringtone_index == 8:
+        alarm.motor_movement = i_am_speed
+    else:
+        alarm.motor_movement = custom_movement
+
 with open('alarms.json', 'r') as f:
     alarm = json.load(f)
     alarm = alarm[0]
@@ -160,6 +168,7 @@ switch = Switch(config.switch)
 display_timer = Neotimer(config.display_timeout_min*60_000) 
 display_timer.start()
 myalarm = Alarm(10, 39, config.alarm_timeout_min*60, True, custom_movement, alarm_ringtone, motor, speaker, display, display_timer)
+ringtone_to_movement(myalarm, alarm_ringtone)
 #myalarm = Alarm(alarm_hour, alarm_minute, 120, True, custom_movement, alarm_ringtone, motor, speaker, display)
 refresh_time_cooldown_timer = Neotimer(0)
 refresh_time_cooldown_timer.start()
@@ -180,6 +189,8 @@ for motd_json in motds_data:
 rtc = RTC()
 connect.do_connect()
 settime()
+
+
 
 try:    
     while True:
@@ -332,8 +343,7 @@ try:
                 myalarm.hour = alarm_hour
                 myalarm.minute = alarm_minute
                 myalarm.ringtone = ringtone_index
-
-
+                ringtone_to_movement(myalarm, ringtone_index)
 finally:
     print("doing cleanup")
     speaker.cleanup()

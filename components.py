@@ -4,17 +4,20 @@ from lib.neotimer import Neotimer
 import config
 from lib.picodfplayer import DFPlayer
 class Motor:
-    def __init__(self, left_pin, right_pin, pwm_freq):
+    def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
         self.left_pin = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
         self.right_pin = PWM(Pin(right_pin), pwm_freq, duty_u16=0)
         self.is_idle = True
         self.ready = False
         self.movement_increment = -1
         self.timer = Neotimer(0)
-    
-    def _interact(self, cmd, speed):
+        self.min_pwm = min_pwm
+        self.max_pwm = 65535
+    def _interact(self, cmd, speed_percent):
         #speed to duty cycle (speed param is percentage)
-        duty_cycle = int((65535*speed) / 100)
+        speed_percent = max(0, min(speed_percent, 100))
+        # Linear interpolation
+        duty_cycle = int(self.min_pwm + (speed_percent / 100) * (self.max_pwm - self.min_pwm))
 
         if cmd == 'l':
             self.left_pin.duty_u16(duty_cycle)
@@ -218,16 +221,71 @@ if __name__ == '__main__':
     hour = now[4]
     minute = now[5]
     from utime import sleep
-    motor = Motor(config.motor_l, config.motor_r, 20_000)
+    motor = Motor(config.motor_l, config.motor_r, 20_000, 37000)
+    speaker = config.speaker
     custom_movement = [
-    ('l', 20000, 80),    # move left for 0.8s at 85% speed
-    ('r', 800, 85),
-    ('r', 400, 85),
+        ('l', 333.0, 100),
+        ('r', 833.0, 100),
+        ('l', 867.0, 100),
+        ('r', 1017.0, 100),
+        ('l', 1100.0, 100),
+        ('r', 1100.0, 100),
+        ('l', 1050.0, 100),
+        ('r', 1066.0, 100),
+        ('l', 567.0, 100),
+        ('r', 567.0, 100),
+        ('l', 1250.0, 100),
+        ('r', 1066.0, 100),
+        ('l', 417.0, 100),
+        ('r', 583.0, 100),
+        ('l', 1150.0, 100),
+        ('r', 467.0, 100),
+        ('l', 550.0, 100),
+        ('r', 1150.001, 100),
+        ('l', 516.999, 100),
+        ('r', 500.0, 100),
+        ('l', 1066.0, 100),
+        ('r', 1084.0, 100),
+        ('l', 1100.0, 100),
+        ('r', 466.0, 100),
+        ('l', 584.002, 100),
+        ('r', 532.999, 100),
+        ('l', 533.001, 100),
+        ('r', 517.0, 100),
+        ('l', 566.999, 100),
+        ('r', 1132.999, 100),
+        ('l', 1050.001, 100),
+        ('r', 632.999, 100),
+        ('l', 517.0, 100),
+        ('r', 299.999, 100),
+        ('l', 283.001, 100),
+        ('r', 250.0, 100),
+        ('l', 233.999, 100),
+        ('r', 1083.0, 100),
+        ('l', 483.0, 100),
+        ('r', 584.0, 100),
+        ('l', 1083.0, 100),
+        ('r', 533.001, 100),
+        ('l', 500.0, 100),
+        ('r', 1100.0, 100),
+        ('l', 466.999, 100),
+        ('r', 533.001, 100),
+        ('l', 1099.998, 100),
+        ('r', 1049.999, 100),
+        ('l', 1134.003, 100),
+        ('r', 500.0, 100),
+        ('l', 583.0, 100),
+        ('r', 532.997, 100),
+        ('l', 534.0, 100),
+        ('r', 516.003, 100),
     ]
-    motor.set_movement(custom_movement)
+    from config import display
+    display_timer = Neotimer(1000)
+    myalarm = Alarm(hour, minute, config.alarm_timeout_min*60, True, custom_movement, 13, motor, speaker, display, display_timer)
     try:
         while True:
-            motor.do_movement()
+            myalarm.update(now)
     finally:
+        speaker.cleanup()
         motor.stop()
         
