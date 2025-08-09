@@ -96,6 +96,7 @@ import displaystates
 import json
 from config import motor, speaker
 from movements import *
+import socket
 #motor setup
 
 custom_movement = [
@@ -161,6 +162,13 @@ with open('alarms.json', 'r') as f:
     alarm_ampm = alarm['ampm']
     alarm_ringtone = alarm['ringtone']
 
+def http_get_no_wait(host, path="/"):
+    addr = socket.getaddrinfo(host, 80)[0][-1]
+    s = socket.socket()
+    s.connect(addr)
+    s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " + host.encode() + b"\r\nConnection: close\r\n\r\n")
+    s.close()
+
 mode = 'home'
 scroller = 0
 usb_power = Pin('WL_GPIO2', Pin.IN)
@@ -189,8 +197,6 @@ for motd_json in motds_data:
 rtc = RTC()
 connect.do_connect()
 settime()
-
-
 
 try:    
     while True:
@@ -239,18 +245,19 @@ try:
             elif home_cmd == 'toggle_light':
                 print("toggling light...")
                 try:
-                    response = urequests.get('http://192.168.1.21/toggle_light')
+                    http_get_no_wait("192.168.1.21", "/toggle_light")
                 except OSError as e:
                     print("sending GET request failed")
-                try:
-                    response = response.text()
-                except OSError as e:
-                    if e.errno == errno.ECONNRESET:
-                        print("reading response failed")
-                except Exception:
-                    print("Didn't work. Maybe the server is down?")
-                else:
-                    response.close()  
+                # try:
+                #     response = response.text()
+                # except OSError as e:
+                #     if e.errno == errno.ECONNRESET:
+                #         print("reading response failed")
+                # except Exception:
+                #     print("Didn't work. Maybe the server is down?")
+                # else:
+                #     response.close()  
+                home_cmd = None
 
             elif home_cmd == 'toggle_display':
                 home_cmd = None
