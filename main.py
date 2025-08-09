@@ -239,7 +239,7 @@ try:
             elif home_cmd == 'toggle_light':
                 print("toggling light...")
                 try:
-                    response = urequests.get('http://192.168.1.45/toggle_light')
+                    response = urequests.get('http://192.168.1.21/toggle_light')
                 except OSError as e:
                     print("sending GET request failed")
                 try:

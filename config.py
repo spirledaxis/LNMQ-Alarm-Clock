@@ -6,7 +6,7 @@ from lib.picodfplayer import DFPlayer
 #motor
 motor_l = 19
 motor_r = 18
-motor = Motor(motor_l, motor_r, 20_000)
+motor = Motor(motor_l, motor_r, 20_000, 37000)
 
 #dfplayer
 rx = 17

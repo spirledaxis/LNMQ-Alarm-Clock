@@ -1,9 +1,23 @@
-import pywemo
+
 import socket
 import time
+import asyncio
+from kasa import Discover
+from kasa_creds import username, password
+async def main():
+    dev = await Discover.discover_single("192.168.1.74", username=username, password=password)
+    await dev.update()
+    dev_info = dev.state_information
+    state = bool(dev_info['State'])
+    print(state)
+    if state == True:
+        await dev.turn_off()
+    elif state == False:
+        await dev.turn_on()
+    else:
+        print("cooked")
 
-url = pywemo.setup_url_for_address("192.168.1.18")
-fan = pywemo.discovery.device_from_description(url)
+    await dev.update()
 
 addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
 s = socket.socket()
@@ -24,8 +38,7 @@ try:
 
         if 'GET /toggle_light' in request:
             try:
-                fan.toggle()
-                body = f'light toggled: {fan.get_state()}'
+                asyncio.run(main())
                 response = (
                     'HTTP/1.1 200 OK\r\n'
                     'Content-Type: text/plain\r\n'
