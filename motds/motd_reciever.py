@@ -1,117 +1,104 @@
 import socket
-import connect
+import select
+import time
 import json
 from machine import RTC #type: ignore
-import time
-html = """
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>MOTD Server</title>
-  </head>
-  <body>
-    <h1>Message of the Day</h1>
-    <form action="/" method="get">
-      <input type="text" name="motd" placeholder="Enter MOTD here">
-      <input type="text" name="author" placeholder="Enter author">
-      <input type="submit" value="Submit">
-    </form>
-    <p>Current MOTD: <strong>{motd}</strong></p>
-    <p>Author: <strong>{author}</strong></p>
-  </body>
-</html>
-"""
-connect.do_connect()
-motd = "None yet!"
-author = "Unknown"
-
-#example setting motd and author
-#http://192.168.1.51/?motd=Hello+World&author=gurt
-
-# Set up a basic socket server
-addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
-s = socket.socket()
-s.bind(addr)
-s.listen(1)
-
-print('Listening on http://0.0.0.0/')
-
 rtc = RTC()
+# Setup server socket
+def web_setup():
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(('0.0.0.0', 80))
+    s.listen(5)
+    s.setblocking(False)
+    clients = []  # keep track of open client sockets
+    return s, clients
 
-while True:
-    try:
-        cl, addr = s.accept()
-    except Exception:
-        continue
-  
-    print('yo')
-    print('Client connected from', addr)
-  
-    request = b''
-    for _ in range(50):  # try up to ~0.5 sec (50 * 0.01)
-        try:
-            request = cl.recv(1024)
-            request = str(request)
-            break
-        except OSError as e:
-            if e.errno == 11:  # EAGAIN
-                time.sleep(0.01)
-                continue
-            else:
-                raise
-    else:
-        print('Timeout waiting for data')
-        cl.close()
-        continue
+#welcome to indentation hell
+def web_server(s, clients):
 
-  # Look for '?motd=' and '&author=' in the request
-    if 'GET /?motd=' in request:
-        query = request.split('GET /?')[1].split(' ')[0]
-        params = query.split('&')
-        for p in params:
-            if p.startswith('motd='):
-                motd = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
-            elif p.startswith('author='):
-                author = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
+    # Check for new incoming connections
+    rlist, _, _ = select.select([s], [], [], 0)
+    for server_sock in rlist:
+        cl, addr = server_sock.accept()
+        print('Client connected from', addr)
+        cl.setblocking(False)
+        clients.append(cl)
 
-        print(f"New data: {motd}, {author}")
+    # Check if any client sockets have data to read
+    if clients:
+        rlist, _, _ = select.select(clients, [], [], 0)
+        for cl in rlist:
+            try:
+                data = cl.recv(1024)
+                if not data:
+                    # client closed connection
+                    cl.close()
+                    clients.remove(cl)
+                    continue
 
-        with open('motds.json', 'r') as f:
-            data = json.load(f)
-            print(data)
-        highest_id_dict = data[-1]
-        highest_id = highest_id_dict["id"]
-        new_id = highest_id + 1
+                request = data.decode()
+                print("Request:", request)
+                if 'GET /?motd=' in request:
+                    query = request.split('GET /?')[1].split(' ')[0]
+                    params = query.split('&')
+                    for p in params:
+                        if p.startswith('motd='):
+                            motd = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
+                        elif p.startswith('author='):
+                            author = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
 
-        now = rtc.datetime()
-        newdata = {
-            "motd": motd,
-            "id": new_id,
-            "author": author,
-            "time": now
-        }
-        
-        data.append(newdata)
+                    print(f"New data: {motd}, {author}")
 
-        with open('motds.json', 'w') as f:
-                json.dump(data, f)
-        
-        print("saved the new data")
+                    with open('motds.json', 'r') as f:
+                        data = json.load(f)
+                        print(data)
+                    highest_id_dict = data[-1]
+                    highest_id = highest_id_dict["id"]
+                    new_id = highest_id + 1
 
-    if 'GET /motds.json' in request:
-        with open('motds.json', 'r') as f:
-            data = json.load(f)
+                    now = rtc.datetime()
+                    newdata = {
+                        "motd": motd,
+                        "id": new_id,
+                        "author": author,
+                        "time": now,
+                        "new": True
+                    }
+                    
+                    data.append(newdata)
 
-        response_body = json.dumps(data)
-        cl.send('HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n')
-        cl.send(response_body)
-        cl.close()
-        continue
+                    with open('motds.json', 'w') as f:
+                        json.dump(data, f)
+                    
+                    print("saved the new data")
+                    cl.send(b'HTTP/1.0 200 OK\r\n\r\nMotd Recieved')
+                    cl.close()
+                    clients.remove(cl)
+                    
+                    return newdata
 
+                elif 'GET /motds.json' in request:
+                    with open('motds.json', 'r') as f:
+                        data = json.load(f)
 
-    response = html.format(motd=motd, author=author)
+                    response_body = json.dumps(data)
+                    cl.send('HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n')
+                    cl.send(response_body)
+                    cl.close()
+                    continue
+                               
+                else:
+                    cl.send(b'HTTP/1.0 200 OK\r\n\r\nDeault response')
+                    cl.close()
+                    clients.remove(cl)
 
-    cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-    cl.send(response)
-    cl.close()
+            except Exception as e:
+                print("client error:", e)
+                cl.close()
+                clients.remove(cl)
 
+if __name__ == '__main__':
+    a, b = web_setup()
+    while True:
+        web_server(a, b)
