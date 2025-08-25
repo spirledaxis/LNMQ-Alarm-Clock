@@ -1,15 +1,7 @@
-"""the main file. Controls all componets of this project:
-Motor
-Display
-Internet
-Input
-Speaker
-"""
 #imports
-from lib.ssd1309 import Display
-import framebuf
-from machine import SPI, Pin
-import config
+
+
+import framebuf #type: ignore
 from config import display
 booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -78,133 +70,45 @@ booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 icon = framebuf.FrameBuffer(booticon, 128, 64, framebuf.MONO_VLSB)
 display.draw_sprite(icon, x=0 , y=0, w=128, h=64)
 display.present()
+
+import config
 from machine import RTC #type: ignore
-from utime import sleep_ms #type: ignore
-import urequests #type: ignore
-import errno
-from components import Motor, Alarm, Switch, Button
+from components import Alarm, Switch
+from motds import motd_reciever
 from lib.neotimer import Neotimer
-import lib.timeutils as timeutils
-from lib.picodfplayer import DFPlayer
 from lib.ntptime import settime
-from motds import motd_parser
-from connect import check_connection
-from displaystates import bally, display
-from motds import motd_reciever_copy_2
 import connect
-import displaystates
-import json
-from config import motor, speaker
-from movements import *
-import socket
+import mode
 #motor setup
 
-custom_movement = [
-    ('r', 400, 100),  # quick burst right at full speed
-    ('l', 400, 100),  # quick burst left at full speed
-    ('r', 300, 100),  # shorter burst right
-    ('l', 300, 100),  # shorter burst left
-    ('w', 200, 0),    # brief pause
-    ('r', 600, 80),   # longer slide right at slightly lower speed
-    ('l', 600, 80),   # longer slide left
-    ('w', 100, 0),    # quick pause
-    ('r', 200, 100),  # quick snap right
-    ('l', 200, 100),  # quick snap left
-    ('w', 300, 0),    # pause before finish
-    ('r', 500, 90),   # final strong move right
-    ('l', 500, 90)    # final strong move left
-]
 
-alm_cmd = None
-def make_set_alm_cmd(val):
-    def handler():
-        global alm_cmd
-        alm_cmd = val
-    return handler
-
-home_cmd = None
-def make_set_home_cmd(val):
-    def handler():
-        global home_cmd
-        home_cmd = val
-    return handler
-
-alm_buttons = [
-    Button(config.fwd, make_set_alm_cmd('fwd')),
-    Button(config.rev, make_set_alm_cmd('rev')),
-    Button(config.alm_set, make_set_alm_cmd('exit')),
-    Button(config.snd_fx_l, make_set_alm_cmd('selection'))
-]
-home_buttons = [
-    Button(config.alm_set, make_set_home_cmd('goto_alarm')),
-    Button(config.snze_l, make_set_home_cmd('toggle_light')),
-    Button(config.fwd, make_set_home_cmd('read_msg')),
-    Button(config.snd_fx_l, make_set_home_cmd('toggle_display'))
-]
-firsttime_alm = True
-
-with open('motds.json', 'r') as f:
-    motds_data = json.load(f)
-
-def ringtone_to_movement(alarm, _ringtone_index):
-    if _ringtone_index == 13:
-        alarm.motor_movement = freedom_dive
-    elif _ringtone_index == 8:
-        alarm.motor_movement = i_am_speed
-    else:
-        alarm.motor_movement = custom_movement
-
-with open('alarms.json', 'r') as f:
-    alarm = json.load(f)
-    alarm = alarm[0]
-    alarm_hour = int(alarm['hour'])
-    alarm_minute = int(alarm['minute'])
-    alarm_ampm = alarm['ampm']
-    alarm_ringtone = alarm['ringtone']
-
-def http_get_no_wait(host, path="/"):
-    addr = socket.getaddrinfo(host, 80)[0][-1]
-    s = socket.socket()
-    s.connect(addr)
-    s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " + host.encode() + b"\r\nConnection: close\r\n\r\n")
-    s.close()
-
-mode = 'home'
-scroller = 0
-usb_power = Pin('WL_GPIO2', Pin.IN)
-switch = Switch(config.switch)
-display_timer = Neotimer(config.display_timeout_min*60_000) 
-display_timer.start()
-myalarm = Alarm(10, 39, config.alarm_timeout_min*60, True, custom_movement, alarm_ringtone, motor, speaker, display, display_timer)
-ringtone_to_movement(myalarm, alarm_ringtone)
-#myalarm = Alarm(alarm_hour, alarm_minute, 120, True, custom_movement, alarm_ringtone, motor, speaker, display)
-refresh_time_cooldown_timer = Neotimer(0)
-refresh_time_cooldown_timer.start()
-
-motd_done = False
-motd = motd_parser.select_random_motd(motds_data)
-motd = motd['motd']
-motd_len = bally.measure_text(motd)
-s, clients = motd_reciever_copy_2.web_setup()
-new_motds = []
-for motd_json in motds_data:
-    if motd_json['new'] is True:
-        print('found an new motd')
-        print('appending', motd_json)
-        new_motds.append(motd_json)
-        print('new motds', new_motds)
-
+s, clients = motd_reciever.web_setup()
 rtc = RTC()
 connect.do_connect()
 settime()
+from components import Motor
+motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
+switch = Switch(config.switch)
+myalarm = Alarm(config.alarm_timeout_min * 60, motor, config.speaker, switch)
+
+display_manager = mode.DisplayManager()
+home = mode.Home(display_manager, myalarm, 'home')
+alarm = mode.SetAlarm(display_manager, myalarm, 'set_alarm')
+off = mode.DisplayOff(display_manager, 'display_off')
+display_manager.display_states = [home, alarm, off]
+display_manager.activate_state("home")
+display_timer = config.display_timer
+prev_dur = 0
+refresh_time_cooldown_timer = Neotimer(0).start()
 
 try:    
     while True:
+        display_manager.run_current_state()
         now = rtc.datetime()
         #webserver
-        new_motd = motd_reciever_copy_2.web_server(s, clients)
+        new_motd = motd_reciever.web_server(s, clients)
         if new_motd is not None:
-            new_motds.append(new_motd)
+            home.new_motds.append(new_motd)
 
         #handle alarm
         myalarm.update(now)
@@ -214,14 +118,11 @@ try:
         else:
             myalarm.enabled = False
 
-        if display_timer.finished() and display.on:
-            print("display got timed out")
-            display.sleep()
-            display_timer.restart()
-            mode = 'home'
-    
-        if home_cmd is not None or alm_cmd is not None:
-            display_timer.restart()
+        dur = display_manager.display_timer.get_elapsed()
+        done = display_manager.display_timer.finished()
+        cycle_time = dur - prev_dur
+        prev_dur = dur
+        #print(config.display_timeout_min*60_000-dur, done, cycle_time)
 
         #ntp
         hour = now[4]
@@ -233,127 +134,10 @@ try:
             refresh_time_cooldown_timer.start()
 
         switch.update()
-        if mode == 'home':
-            for btn in home_buttons:
-                btn.update()
 
-            if home_cmd == 'toggle_light' and myalarm.is_active:
-                myalarm.stop()
-                home_cmd = None
-                continue
-
-            elif home_cmd == 'toggle_light':
-                print("toggling light...")
-                try:
-                    http_get_no_wait("192.168.1.21", "/toggle_light")
-                except OSError as e:
-                    print("sending GET request failed")
-                # try:
-                #     response = response.text()
-                # except OSError as e:
-                #     if e.errno == errno.ECONNRESET:
-                #         print("reading response failed")
-                # except Exception:
-                #     print("Didn't work. Maybe the server is down?")
-                # else:
-                #     response.close()  
-                home_cmd = None
-
-            elif home_cmd == 'toggle_display':
-                home_cmd = None
-                print('toggling display')
-                if not display.on:
-                    display.wake()
-                    display_timer.start()
-
-                else:
-                    display_timer.restart()
-                    display.sleep()
-                    continue
-            #Important point. Past here, in home mode, no processing happens when display is off.
-            if not display.on:
-                continue
-
-            if home_cmd == 'goto_alarm':
-                mode = 'set_alarm'
-
-            elif home_cmd == 'read_msg' and len(new_motds) != 0:
-                with open('motds.json', 'r') as f:
-                    all_motds = json.load(f)
-
-                for motd in all_motds:
-                    print(new_motds)
-                    if motd['id'] == new_motds[0]['id']:
-                        motd['new'] = False
-                        break
-
-                motd = new_motds[0]
-                new_motds.pop(0)
-                motd = f"{motd['motd']} @{motd['author']}"
-                motd_len = bally.measure_text(motd)
-                scroller = 0
-                
-                with open('motds.json', 'w') as f:
-                    json.dump(all_motds, f)
-
-                with open('motds.json', 'r') as f:
-                    motds_data = json.load(f)
-
-            if motd_done:
-                print("motd done, selecting random one out of")
-                print(motds_data)
-                motd = motd_parser.select_random_motd(motds_data)
-                motd = motd['motd']
-                motd_len = bally.measure_text(motd)
-
-            scroller += 1
-            if scroller >= motd_len + display.width + 10:
-                motd_done = True
-                scroller = 0
-            else:
-                motd_done = False
-
-            if len(new_motds) != 0:
-                display_mail = True
-            else:
-                display_mail = False
-
-            displaystates.home(usb_power(), switch.get_state(), check_connection(), display_mail, motd, scroller, now)
-        
-            home_cmd = None
-
-        elif mode == 'set_alarm':
-            if firsttime_alm:
-                with open('alarms.json', 'r') as f:
-                    alarm = json.load(f)
-                with open('ringtones.json', 'r') as f:
-                    ringtone_json = json.load(f)
-                alarm = alarm[0]
-                alarm_hour = int(alarm['hour'])
-                alarm_minute = int(alarm['minute'])
-                alarm_ampm = alarm['ampm']
-                ringtone_index = alarm['ringtone']
-                select_hm = 'minute'
-                firsttime_alm = False
-
-            for btn in alm_buttons:
-                btn.update()
-
-            alarm_hour, alarm_minute, alarm_ampm, ringtone_index, select_hm, exit_alm = displaystates.set_alarm(
-                alarm_hour, alarm_minute, alarm_ampm, ringtone_index, ringtone_json, select_hm, alm_cmd)
-
-            alm_cmd = None
-            if exit_alm:
-                mode = 'home'
-                firsttime_alm = True
-                alarm_hour = timeutils.to_military_time(alarm_hour, alarm_ampm)
-                myalarm.hour = alarm_hour
-                myalarm.minute = alarm_minute
-                myalarm.ringtone = ringtone_index
-                ringtone_to_movement(myalarm, ringtone_index)
 finally:
     print("doing cleanup")
-    speaker.cleanup()
-    displaystates.display.cleanup()
+    config.speaker.cleanup()
+    display.cleanup()
     motor.stop()
     print("cleanup success!")

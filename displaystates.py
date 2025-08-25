@@ -223,33 +223,125 @@ def set_alarm(hour, minute, ampm, ringtone_index, ringtone_json, selection, acti
     display.present()
     return int(hour), int(minute), ampm, ringtone_index, selection, False
 
+def messenger(usb_power, switch_state, wifi_state, display_mail, motd, invert):
+    
+    motd_parts = motd.split(' ')
+    split_motd = []
+    len_text_line = 0
+    partial_motd = ''
+   
+    for part in motd_parts:
+        word_width = bally.measure_text(part + ' ')  # include space
+        if len_text_line + word_width <= display.width:
+            partial_motd += part + ' '
+            len_text_line += word_width
+        else:
+            # save current line before adding the new word
+            split_motd.append(partial_motd.rstrip())
+            # start new line with current word
+            partial_motd = part + ' '
+            len_text_line = word_width
+
+    if partial_motd:
+        split_motd.append(partial_motd.rstrip())
+
+    
+    num_lines = len(split_motd)
+    if num_lines > 5:
+        text_y = (display.height // 2 - bally.height // 2) + bally.height // 2 * (num_lines - 1)
+    else:
+        text_y = display.height - bally.height
+    for part in split_motd:
+        part_len = bally.measure_text(part)
+        text_x = display.width // 2 + part_len // 2
+        display.draw_text(text_x, text_y, part, bally, rotate=180)
+        text_y -= bally.height
+    
+    # display.draw_vline(display.width//2, 0, display.height-1)
+    # display.draw_hline(0, display.height // 2, display.width)
+    
+    print(split_motd)
+
+    spacing = 4
+
+    num_icons = 2
+    if switch_state:
+        num_icons += 1
+    if display_mail:
+        num_icons += 1
+
+    center_x = display.width // 2
+    total_width = (num_icons * 8) + ((num_icons - 1) * spacing)
+    start_x = center_x - total_width // 2
+
+    x = 1
+    y = 1
+    if num_icons == 2:
+        usb_pos = center_x + 4
+        wifi_pos = center_x - 12
+    elif num_icons == 3:
+        bell_pos = center_x - 4
+        usb_pos = bell_pos - 12
+        wifi_pos = bell_pos + 12
+        mail_pos = bell_pos
+    elif num_icons == 4:
+        bell_pos = center_x + 4
+        wifi_pos = bell_pos + 12
+        usb_pos = center_x - 8
+        mail_pos = center_x - 20
+    
+    display.fill_rectangle(0, 0, display.width, 9, invert = not invert)
+    
+
+    if switch_state:
+        display.draw_sprite(bell_icon_fb, x=bell_pos, y=y, w=8, h=8)
+    
+    if usb_power:
+        display.draw_sprite(plug_icon, x=usb_pos, y=y, w=8, h=8)
+    else:
+        display.draw_sprite(battery_icon, x=usb_pos, y=y, w=8, h=8)
+    
+    if wifi_state:
+        display.draw_sprite(wifi_icon, x=wifi_pos, y=y, w=8, h=8)
+    else:
+        display.draw_sprite(no_wifi_icon, x=wifi_pos, y=y, w=8, h=8)
+    
+    if display_mail:
+        display.draw_sprite(mail_icon, x=mail_pos, y=y, w=8, h=8)
+    
+    display.present()
 if __name__ == '__main__':
-    firsttime_alm = True
-    try:
-        while True:
-            if firsttime_alm:
-                with open('alarms.json', 'r') as f:
-                    alarm = json.load(f)
-                with open('ringtones.json', 'r') as f:
-                    ringtone_json = json.load(f)
+    import utime
+    import random
+    invert = True
+    while True:
+        utime.sleep_ms(500)
+        usb = random.randint(1, 2)
+        bell = random.randint(1, 2)
+        wifi = random.randint(1, 2)
+        mail = random.randint(1, 2)
+        invert = not invert
+        if usb == 1:
+            usb = True
+        else:
+            usb = False
 
-                alarm = alarm[0] 
-                alarm_hour = alarm['hour']
-                alarm_minute = alarm['minute']
-                alarm_ampm = alarm['ampm']
-                ringtone_index = alarm['ringtone']
-                select_hm = 'minute'
-                alm_cmd = None
-                firsttime_alm = False
-                
-            alarm_hour, alarm_minute, alarm_ampm, ringtone_index, select_hm, exit_alm = set_alarm(
-                alarm_hour, alarm_minute, alarm_ampm, ringtone_index, ringtone_json, select_hm, alm_cmd)
+        if bell == 1:
+            bell = True
+        else:
+            bell = False
 
-            alm_cmd = None
-            if exit_alm:
-                mode = 'home'
-                firsttime_alm = True
-    finally:
-        print("doing cleanup")
-        display.cleanup()
+        if wifi == 1:
+            wifi = True
+        else:
+            wifi = False
+
+        if mail == 1:
+            mail = True
+        else:
+            mail = False
+
+        messenger(usb, bell, wifi, mail, 'The Great Barrier Reef is one of the most beautiful places that one can be 1234.', invert)
+
+    
  

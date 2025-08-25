@@ -1,8 +1,11 @@
 from lib.neotimer import Neotimer
 from machine import Pin, PWM #type: ignore
 from lib.neotimer import Neotimer
-import config
 from lib.picodfplayer import DFPlayer
+import config
+import json
+from lib import timeutils
+from movements import *
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
         self.left_pin = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
@@ -79,24 +82,33 @@ class Motor:
         self.ready = True
 
 class Alarm:
-    def __init__(self, hour, minute, timeout_s, enabled, motor_movement, ringtone, motor, speaker, display, display_timeout):
+    def __init__(self, timeout_s, motor, speaker, switch):
         """use military time for the hour. """
-        self.hour = hour
-        self.minute = minute
-        self.timeout_s = timeout_s
-        self.timeout_timer = Neotimer(self.timeout_s*1000)
-        self.enabled = enabled
-        self.motor_movement = motor_movement
-        self.ringtone = ringtone
-        self.cooldown = False #cooldown logic so it doesn't go off for the entire minute
-        self.cooldown_timer = Neotimer(0)
-        self.alarm_restart_timer = Neotimer(1000)
+        with open('alarms.json', 'r') as f:
+            alarm = json.load(f)
+            alarm = alarm[0]
+            alarm_hour = int(alarm['hour'])
+            alarm_ampm = alarm['ampm']
+            self.minute = int(alarm['minute'])
+            self.ringtone = alarm['ringtone']
+            
+        self.hour = timeutils.to_military_time(alarm_hour, alarm_ampm)
+        self.timeout_timer = Neotimer(timeout_s*1000)
+        self.enabled = switch.get_state()
         self.is_active = False
+        self.locked = False #used so alarm logic doesn't go off for the entire minute
         self.motor = motor
         self.speaker = speaker
-        self.display = display
-        self.display_timeout = display_timeout
-        self.motor.set_movement(self.motor_movement)
+        self.set_movement_by_ringtone()
+        
+    def set_movement_by_ringtone(self):
+        if self.ringtone == 13:
+            self.motor.set_movement(freedom_dive)
+        elif self.ringtone == 8:
+            self.motor.set_movement(i_am_speed)
+        else:
+            self.motor.set_movement(custom_movement)
+
     def update(self, now):
         """
         Args:
@@ -105,21 +117,13 @@ class Alarm:
 
         now_hour = now[4]
         now_minute = now[5]
-
-        if now_hour == self.hour and now_minute == self.minute and not self.cooldown and self.enabled:
-            self.display_timeout.restart()
-            self.display.wake()
-            print("alarm should go off now")
-            self.cooldown = True 
-            self.cooldown_timer = Neotimer(70_000)
-            self.cooldown_timer.start()
-            self.is_active = True
-            self.speaker.playTrack(1, self.ringtone)
-            self.motor.set_movement(self.motor_movement)
-            self.timeout_timer.start()
-
-        if self.cooldown_timer.finished():
-            self.cooldown = False
+        print(self.hour, self.minute, self.locked, self.enabled)
+        if now_hour == self.hour and now_minute == self.minute and not self.locked and self.enabled:
+            self.fire()
+            print("firing")
+        
+        elif now_hour != self.hour and now_minute != self.minute and self.locked:
+            self.locked = False
 
         if self.timeout_timer.finished():
             print("timeout reached")
@@ -132,7 +136,20 @@ class Alarm:
                 self.speaker.playTrack(1, self.ringtone)
                 self.motor.start()
             self.motor.do_movement()
+    
+    def fire(self):
+        if self.locked:
+            return
         
+        print("alarm should go off now")
+        self.locked = True
+        self.is_active = True
+        config.display_timer.reset()
+        config.display.wake()
+
+        self.speaker.playTrack(1, self.ringtone)
+        #self.motor.set_movement(self.motor_movement)
+        self.timeout_timer.start()
 
     def stop(self):
         print("stopping...")
@@ -142,15 +159,9 @@ class Alarm:
         self.speaker.pause()
         self.motor.stop()
         self.timeout_timer.stop()
-        self.timeout_timer.restart()
+        self.timeout_timer.reset()
         self.is_active = False
 
-    def fire(self):
-        "Use this to fire the alarm whenever. Bypasses cooldown, and doesn't repeat."
-        self.is_active = True
-        print("firing...")
-
-       
 class Button:
     def __init__(self, pin, callback, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -160,6 +171,7 @@ class Button:
         self.prev_state = 0
         self.is_debounced = False
         self.press_counter = 0
+        self.pressed = False
 
     def update(self):
         if self.debounce_timer.debounce_signal(not self.pin.value()):
@@ -172,17 +184,20 @@ class Button:
 
         if (self.state == 0 and self.prev_state == 1):
             if self.is_debounced:
+                self.pressed = True
                 self.callback_func()
                 print(self.press_counter, end = ' ')
                 self.press_counter += 1
             else:
                 print("under debounce cooldown")
-            
+                
             self.is_debounced = False
 
+        else:
+            self.pressed = False
+            
         self.prev_state = self.state
      
-        
 class Switch:
     def __init__(self, pin, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -214,78 +229,19 @@ class Switch:
         return self.stable_state
     
 if __name__ == '__main__':
-    print('ehlo')
     from machine import RTC
+    motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
+    switch = Switch(config.switch)
+    myalarm = Alarm(config.alarm_timeout_min * 60, motor, config.speaker, switch)
     rtc = RTC()
     now = rtc.datetime()
-    hour = now[4]
-    minute = now[5]
-    from utime import sleep
-    motor = Motor(config.motor_l, config.motor_r, 20_000, 37000)
-    speaker = config.speaker
-    custom_movement = [
-        ('l', 333.0, 100),
-        ('r', 833.0, 100),
-        ('l', 867.0, 100),
-        ('r', 1017.0, 100),
-        ('l', 1100.0, 100),
-        ('r', 1100.0, 100),
-        ('l', 1050.0, 100),
-        ('r', 1066.0, 100),
-        ('l', 567.0, 100),
-        ('r', 567.0, 100),
-        ('l', 1250.0, 100),
-        ('r', 1066.0, 100),
-        ('l', 417.0, 100),
-        ('r', 583.0, 100),
-        ('l', 1150.0, 100),
-        ('r', 467.0, 100),
-        ('l', 550.0, 100),
-        ('r', 1150.001, 100),
-        ('l', 516.999, 100),
-        ('r', 500.0, 100),
-        ('l', 1066.0, 100),
-        ('r', 1084.0, 100),
-        ('l', 1100.0, 100),
-        ('r', 466.0, 100),
-        ('l', 584.002, 100),
-        ('r', 532.999, 100),
-        ('l', 533.001, 100),
-        ('r', 517.0, 100),
-        ('l', 566.999, 100),
-        ('r', 1132.999, 100),
-        ('l', 1050.001, 100),
-        ('r', 632.999, 100),
-        ('l', 517.0, 100),
-        ('r', 299.999, 100),
-        ('l', 283.001, 100),
-        ('r', 250.0, 100),
-        ('l', 233.999, 100),
-        ('r', 1083.0, 100),
-        ('l', 483.0, 100),
-        ('r', 584.0, 100),
-        ('l', 1083.0, 100),
-        ('r', 533.001, 100),
-        ('l', 500.0, 100),
-        ('r', 1100.0, 100),
-        ('l', 466.999, 100),
-        ('r', 533.001, 100),
-        ('l', 1099.998, 100),
-        ('r', 1049.999, 100),
-        ('l', 1134.003, 100),
-        ('r', 500.0, 100),
-        ('l', 583.0, 100),
-        ('r', 532.997, 100),
-        ('l', 534.0, 100),
-        ('r', 516.003, 100),
-    ]
-    from config import display
-    display_timer = Neotimer(1000)
-    myalarm = Alarm(hour, minute, config.alarm_timeout_min*60, True, custom_movement, 13, motor, speaker, display, display_timer)
+    myalarm.minute = now[5]
+    myalarm.enabled = True
+    myalarm.ringtone = 8
     try:
         while True:
             myalarm.update(now)
     finally:
-        speaker.cleanup()
         motor.stop()
-        
+        config.speaker.cleanup()
+        config.display.cleanup()

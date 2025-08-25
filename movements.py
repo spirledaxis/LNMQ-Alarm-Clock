@@ -71,3 +71,19 @@ freedom_dive = [
     ('l', 534.0, 100),
     ('r', 516.003, 100),
 ]
+
+custom_movement = [
+    ('r', 400, 100),  # quick burst right at full speed
+    ('l', 400, 100),  # quick burst left at full speed
+    ('r', 300, 100),  # shorter burst right
+    ('l', 300, 100),  # shorter burst left
+    ('w', 200, 0),    # brief pause
+    ('r', 600, 80),   # longer slide right at slightly lower speed
+    ('l', 600, 80),   # longer slide left
+    ('w', 100, 0),    # quick pause
+    ('r', 200, 100),  # quick snap right
+    ('l', 200, 100),  # quick snap left
+    ('w', 300, 0),    # pause before finish
+    ('r', 500, 90),   # final strong move right
+    ('l', 500, 90)    # final strong move left
+]
