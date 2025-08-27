@@ -2,15 +2,18 @@
 import interactions
 from interactions import slash_command, slash_option, OptionType, SlashContext, Client, Intents, BrandColors
 import subprocess
-from bot_token import token
+from creds import token
 import re
 import textwrap
+import time
+import json
 servers = [
     1120883193063677972,
     1403077958943506612,
 ]
 
 pico_ip = '192.168.1.51'
+server_ip = '192.168.1.21'
 bot = Client(intents=Intents.DEFAULT, send_command_tracebacks=True)
 
 @slash_command(name='message', scopes=servers)
@@ -28,6 +31,7 @@ bot = Client(intents=Intents.DEFAULT, send_command_tracebacks=True)
 )
 
 async def send_message(ctx: SlashContext, message: str, show_name=True):
+    await ctx.defer()
     if show_name:
         username = ctx.author.display_name
     else:
@@ -75,28 +79,52 @@ async def send_message(ctx: SlashContext, message: str, show_name=True):
         return
     
     try:
-        message = message.replace(' ', '+')
-        subprocess.run([f"curl", f"http://{pico_ip}/?motd={message}&author={username}"], check=True)
-    except subprocess.CalledProcessError as e:
-        embed = interactions.Embed(
-            title="Error sending the message",
-            description=f'The alarm clock may be on low battery or shut off. Try again later!',
-            color=BrandColors.RED
-        )
-        with open('log.log', 'a') as f:
-            f.write(f'{e}\n')
-    
-        await ctx.send(embed=embed)
-    except:
-        embed = interactions.Embed(
-            title="Other unexpected bug",
-            description=f'twin idek what happened ikiab',
-            color=BrandColors.RED
-        )
-        with open('log.log', 'a') as f:
-            f.write(f'{e}\n')
+        print("doing smth")
+        message_format = message.replace(' ', '+')
+        subprocess.run([f"curl", f"http://{pico_ip}/?motd={message_format}&author={username}"], check=True, timeout=3)
+        print("done")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        print("gurt")
+        try:
+            now = int(time.time())
+            new_motd = {
+                "motd": message,
+                "id": -1,
+                "author": username,
+                "time": now,
+                "new": True
+            }
+            with open('motds_cache.json', 'r') as f:
+                data = json.load(f)
+            data.append(new_motd)
+            newdata = data
+            with open('motds_cache.json', 'w') as f:
+                json.dump(newdata, f)
 
-        await ctx.send(embed=embed)
+            print("good")
+
+        except Exception as e:
+            print(e)
+            print("Bad")
+            embed = interactions.Embed(
+                title="Error sending the message",
+                description=f'The alarm clock may be on low battery or shut off, and the server is offline. Try again later!',
+                color=BrandColors.RED
+            )
+            with open('log.log', 'a') as f:
+                f.write(f'{e}\n')
+        
+            await ctx.send(embed=embed)
+
+        else:
+            print("yeah")
+            embed = interactions.Embed(
+            title="Message sent!",
+            description="Sent message successfully! However, the alarm clock is offline, so it was sent to the server cache instead. The clock will get the message when it boots again.",
+            color=BrandColors.GREEN
+            )
+            await ctx.send(embed=embed)
+            print("good 2")
     else:
         embed = interactions.Embed(
         title="Message sent!",
@@ -104,7 +132,5 @@ async def send_message(ctx: SlashContext, message: str, show_name=True):
         color=BrandColors.GREEN
         )
         await ctx.send(embed=embed)
-    
-    return
 
 bot.start(token)

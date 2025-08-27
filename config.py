@@ -50,9 +50,10 @@ rev = 9
 switch = 6
 
 #timers
-display_timeout_min = 0.0833333
+display_timeout_min = 3
 alarm_timeout_min = 5
 display_timer = Neotimer(display_timeout_min*60_000) 
 
 #other
 ip = '192.168.1.51'
+server_ip = '192.168.1.21'

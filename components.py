@@ -1,7 +1,6 @@
 from lib.neotimer import Neotimer
 from machine import Pin, PWM #type: ignore
 from lib.neotimer import Neotimer
-from lib.picodfplayer import DFPlayer
 import config
 import json
 from lib import timeutils
@@ -95,6 +94,7 @@ class Alarm:
         self.hour = timeutils.to_military_time(alarm_hour, alarm_ampm)
         self.timeout_timer = Neotimer(timeout_s*1000)
         self.enabled = switch.get_state()
+        self.switch = switch
         self.is_active = False
         self.locked = False #used so alarm logic doesn't go off for the entire minute
         self.motor = motor
@@ -114,7 +114,13 @@ class Alarm:
         Args:
             now: a rtc tuple"""
         #(year, month, mday, hour, minute, second, weekday, yearday)
-
+        self.switch.update()
+        if self.switch.get_state():
+            self.enabled = True
+        else:
+            print("switch is off")
+            self.enabled = False
+            
         now_hour = now[4]
         now_minute = now[5]
         print(self.hour, self.minute, self.locked, self.enabled)
@@ -207,7 +213,6 @@ class Switch:
         self.lock = False
 
     def update(self):
-
         if self.pin.value() == 0:
             self.state = True
         else:
@@ -229,17 +234,21 @@ class Switch:
         return self.stable_state
     
 if __name__ == '__main__':
-    from machine import RTC
+    from machine import RTC #type: ignore
     motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
     switch = Switch(config.switch)
     myalarm = Alarm(config.alarm_timeout_min * 60, motor, config.speaker, switch)
     rtc = RTC()
     now = rtc.datetime()
     myalarm.minute = now[5]
+    myalarm.hour = now[4]
     myalarm.enabled = True
     myalarm.ringtone = 8
+    print("yo")
+    switch = Switch(config.switch)
     try:
         while True:
+            switch.update()
             myalarm.update(now)
     finally:
         motor.stop()

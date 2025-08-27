@@ -167,19 +167,22 @@ class Home(DisplayState):
             config.display.sleep()
             
     def read_msg(self):
+        print("reading message")
         if len(self.new_motds) == 0:
+            print("there are no new motds")
             return
         
         with open('motds.json', 'r') as f:
             all_motds = json.load(f)
 
         for motd in all_motds:
-            #find a new motd
+            #set the read motd to new: false
             if motd['id'] == self.new_motds[0]['id']:
                 motd['new'] = False
                 break
-            else:
-                return
+        else:
+            print("there are no new motds (2)")
+            return
             
         motd = self.new_motds[0]
         self.motd = f"{motd['motd']} @{motd['author']}"
@@ -198,7 +201,8 @@ class Home(DisplayState):
         if self.alarm.is_active:
             self.alarm.stop()
         else:
-            host = config.ip
+            print("turning off light")
+            host = config.server_ip
             path = '/toggle_light'
             addr = socket.getaddrinfo(host, 80)[0][-1]
             s = socket.socket()
@@ -206,7 +210,6 @@ class Home(DisplayState):
             s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " + host.encode() + b"\r\nConnection: close\r\n\r\n")
             s.close()
         
-
     def main(self):
         self.switch.update()
         self.clock()
@@ -303,8 +306,7 @@ class SetAlarm(DisplayState):
         self.alarm.ringtone = self.ringtone_index
     
         self.display_manager.activate_state("home")
-        
-        
+          
     def on_selection(self):
         self.edit_index = (self.edit_index + 1) % len(self.edit_options)
         self.selection = self.edit_options[self.edit_index]

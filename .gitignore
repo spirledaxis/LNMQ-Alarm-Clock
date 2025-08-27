@@ -13,7 +13,6 @@ tests
 fonts
 notes.txt
 *.json
-bot_token.py
+creds.py
 ringtones
-kasa_creds.py
 cleardisplay.py

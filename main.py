@@ -1,6 +1,3 @@
-#imports
-
-
 import framebuf #type: ignore
 from config import display
 booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -73,20 +70,19 @@ display.present()
 
 import config
 from machine import RTC #type: ignore
-from components import Alarm, Switch
+from components import Alarm, Switch, Motor
 from motds import motd_reciever
 from lib.neotimer import Neotimer
 from lib.ntptime import settime
 import connect
 import mode
-#motor setup
-
+import json
 
 s, clients = motd_reciever.web_setup()
 rtc = RTC()
 connect.do_connect()
 settime()
-from components import Motor
+
 motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
 switch = Switch(config.switch)
 myalarm = Alarm(config.alarm_timeout_min * 60, motor, config.speaker, switch)
@@ -97,10 +93,10 @@ alarm = mode.SetAlarm(display_manager, myalarm, 'set_alarm')
 off = mode.DisplayOff(display_manager, 'display_off')
 display_manager.display_states = [home, alarm, off]
 display_manager.activate_state("home")
-display_timer = config.display_timer
-prev_dur = 0
-refresh_time_cooldown_timer = Neotimer(0).start()
 
+prev_dur = 0
+lock_ntptime = False
+config.display.set_contrast(0)
 try:    
     while True:
         display_manager.run_current_state()
@@ -109,6 +105,13 @@ try:
         new_motd = motd_reciever.web_server(s, clients)
         if new_motd is not None:
             home.new_motds.append(new_motd)
+
+            #preserve the motd if it didn't get read before shutdown
+            with open('motds.json', 'r') as f:
+                all_motds = json.load(f)
+            all_motds.append(new_motd)
+            with open('motds.json', 'w') as f:
+                json.dump(all_motds, f)
 
         #handle alarm
         myalarm.update(now)
@@ -127,11 +130,13 @@ try:
         #ntp
         hour = now[4]
         minute = now[5]
-        if hour == 2+12 and minute == 5 and refresh_time_cooldown_timer.finished():
+        if hour == 2+12 and minute == 5 and not lock_ntptime:
+            lock_ntptime = True
             print("setting time via ntp...")
             settime()
-            refresh_time_cooldown_timer = Neotimer(70_000)
-            refresh_time_cooldown_timer.start()
+            
+        elif hour != 2+12 and minute != 5:
+            lock_ntptime = False
 
         switch.update()
 

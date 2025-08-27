@@ -16,7 +16,6 @@ def web_setup():
 
 #welcome to indentation hell
 def web_server(s, clients):
-
     # Check for new incoming connections
     rlist, _, _ = select.select([s], [], [], 0)
     for server_sock in rlist:
@@ -77,7 +76,7 @@ def web_server(s, clients):
                     clients.remove(cl)
                     
                     return newdata
-
+                        
                 elif 'GET /motds.json' in request:
                     with open('motds.json', 'r') as f:
                         data = json.load(f)

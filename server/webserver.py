@@ -3,8 +3,8 @@ import socket
 import time
 import asyncio
 from kasa import Discover
-from kasa_creds import username, password
-async def main():
+from creds import username, password
+async def toggle_lights():
     dev = await Discover.discover_single("192.168.1.74", username=username, password=password)
     await dev.update()
     dev_info = dev.state_information
@@ -37,8 +37,9 @@ try:
         print('Request:', request)
 
         if 'GET /toggle_light' in request:
+            body = 'toggled light'
             try:
-                asyncio.run(main())
+                asyncio.run(toggle_lights())
                 response = (
                     'HTTP/1.1 200 OK\r\n'
                     'Content-Type: text/plain\r\n'
@@ -58,6 +59,40 @@ try:
                     f'{body}'
                 )
 
+            cl.sendall(response.encode())
+            time.sleep(0.1)
+            cl.close()
+
+        elif 'GET /clear_cache' in request:
+            body = 'cleared cache'
+            with open('motds_cache.json', 'w') as f:
+                f.write('[]')
+            
+            response = (
+                    'HTTP/1.1 500 Internal Server Error\r\n'
+                    'Content-Type: text/plain\r\n'
+                    f'Content-Length: {len(body)}\r\n'
+                    'Connection: close\r\n'
+                    '\r\n'
+                    f'{body}'
+                )
+
+            cl.sendall(response.encode())
+            time.sleep(0.1)
+            cl.close()
+
+        elif 'GET /fetch_cache' in request:
+            with open('motds_cache.json', 'r') as f:
+                body = f.read()
+
+            response = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            f"Content-Length: {len(body)}\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            f"{body}"
+        )
             cl.sendall(response.encode())
             time.sleep(0.1)
             cl.close()
