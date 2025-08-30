@@ -10,7 +10,7 @@ import framebuf #type: ignore
 from machine import Pin, RTC #type: ignore
 import network #type: ignore
 from lib.neotimer import Neotimer
-
+import random
 timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
 
@@ -370,7 +370,7 @@ class SetAlarm(DisplayState):
         self.button_logic()
 
 class MessageViewer(DisplayState):
-    
+    #TODO: add drift to stop burn in
     def __init__(self, display_manager, name, home: Home):
         
         self.button_map  = [
@@ -394,7 +394,7 @@ class MessageViewer(DisplayState):
         self.switch = Switch(config.switch)
         self.home = home
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
-        self.spacing = 12
+        self.spacing = 4 + 8
         self.display_manager = display_manager
         self.invert_icons = Neotimer
         self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s*1000)
@@ -418,8 +418,15 @@ class MessageViewer(DisplayState):
     def on_exit(self):
         print("exiting thje messaenger")
         self.display_manager.activate_state("home")
+    
+    def drift(self, min, max):
+        idk = range(min, max+1)
+        offsets = [coord for coord in idk]
+        return random.choice(offsets)
 
     def draw_motd(self):
+
+
         motd_parts = self.motd.split(' ')
         split_motd = []
         len_text_line = 0
@@ -440,31 +447,20 @@ class MessageViewer(DisplayState):
         if partial_motd:
             split_motd.append(partial_motd.rstrip())
 
-
         biggest_part = ''
         for part in split_motd:
             if len(part) > len(biggest_part):
                 biggest_part = part
         
-        self.max_text_len = bally.measure_text(biggest_part)
-        self.paragraph_height = len(split_motd) * bally.height 
+
         num_lines = len(split_motd)
-        text_y = self.starting_text_y = (self.display.height // 2 - bally.height // 2) + bally.height // 2 * (num_lines - 1)
+        text_y = (self.display.height // 2 - bally.height // 2) + bally.height // 2 * (num_lines - 1)
         
-        #self.display.draw_rectangle((self.display.width-self.max_text_len)//2, self.starting_text_y+bally.height-self.paragraph_height, self.max_text_len, self.paragraph_height, invert=False)
         for part in split_motd:
             part_len = bally.measure_text(part)
             text_x = self.display.width // 2 + part_len // 2
             self.display.draw_text(text_x, text_y, part, bally, rotate=180)
             text_y -= bally.height
-
-        
-        
-
-        #self.display.draw_rectangle((self.display.width-max_text_len)//2, starting_text_y+bally.height-paragraph_height, max_text_len, paragraph_height)
-    # display.draw_vline(display.width//2, 0, display.height-1)
-    # display.draw_hline(0, display.height // 2, display.width)
-
 
     def draw_icons(self):
         num_icons = 2
@@ -478,9 +474,9 @@ class MessageViewer(DisplayState):
    
         x = start_x
         y = 1
-        padding = 4
+
         if self.invert:
-            self.display.fill_rectangle(self.display.width-start_x-total_width-padding, y, total_width+2*padding, y+7, invert=False)
+            #self.display.fill_rectangle(self.display.width-start_x-total_width-padding, y, total_width+2*padding, y+7, invert=False)
             if self.switch.get_state():
                 self.display.draw_sprite(self.inverted_bell, x=x, y=y, w=8, h=8)
                 x += self.spacing
@@ -513,13 +509,15 @@ class MessageViewer(DisplayState):
                 x += self.spacing
             else:
                 self.display.draw_sprite(self.home.battery_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
 
             if network.WLAN(network.WLAN.IF_STA).isconnected():
                 self.display.draw_sprite(self.home.wifi_icon, x=x, y=y, w=8, h=8)
                 x += self.spacing
             else:
                 self.display.draw_sprite(self.home.no_wifi_icon, x=x, y=y, w=8, h=8)
-        
+                x += self.spacing
+
             if len(self.home.new_motds) != 0:
                 self.display.draw_sprite(self.home.mail_icon, x=x, y=y, w=8, h=8)
                 x += self.spacing
@@ -534,10 +532,10 @@ class MessageViewer(DisplayState):
         self.button_logic()
         if self.swap_icons.finished():
             self.invert = not self.invert
-            self.swap_icons = Neotimer(self.swap_icons_timer)
+            self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s)
             self.swap_icons.start()
         if self.change_motd.finished():
-            self.change_motd = Neotimer(self.change_motd_timer)
+            self.change_motd = Neotimer(config.messenger_cycle_time_s)
             self.change_motd.start()
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
 
