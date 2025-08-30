@@ -2,7 +2,7 @@
 import socket
 import time
 import asyncio
-from kasa import Discover
+from kasa import Discover, SmartPlug
 from creds import username, password
 async def toggle_lights():
     dev = await Discover.discover_single("192.168.1.74", username=username, password=password)
@@ -19,7 +19,7 @@ async def toggle_lights():
 
     await dev.update()
 
-addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
+addr = socket.getaddrinfo('0.0.0.0', 8080)[0][-1]
 s = socket.socket()
 s.bind(addr)
 s.listen(1)
