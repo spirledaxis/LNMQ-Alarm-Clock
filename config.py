@@ -55,6 +55,7 @@ display_messenger_timeout_min = 0.5
 messenger_cycle_time_s = 30
 messenger_icon_cycle_time_s = 10
 alarm_timeout_min = 5
+bsod_timeout_s = 5
 display_timer = Neotimer(display_timeout_min*60_000) 
 
 #other
