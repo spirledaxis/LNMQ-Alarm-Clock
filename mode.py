@@ -212,9 +212,9 @@ class Home(DisplayState):
         else:
             #TODO: switch to urequests
             print("turning off light")
-            host = '192.168.1.21'
+            host = config.server_ip
             path = '/toggle_light'
-            addr = socket.getaddrinfo(host, 8080)[0][-1]
+            addr = socket.getaddrinfo(host, config.server_port)[0][-1]
             s = socket.socket()
             s.connect(addr)
             s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " + host.encode() + b"\r\nConnection: close\r\n\r\n")

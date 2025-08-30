@@ -115,7 +115,7 @@ connect.do_connect()
 
 with open('motds.json', 'r') as f:
     motds = json.load(f)
-cached_motds = http_get("192.168.1.21", 8080, "/fetch_cache")
+cached_motds = http_get(config.server_ip, config.server_port, "/fetch_cache")
 cached_motds = json.loads(cached_motds)
 print("result is", cached_motds)
 highest_id = motds[-1]["id"]
@@ -127,7 +127,7 @@ for motd in cached_motds:
 with open('motds.json', 'w') as f:
     motds = json.dump(motds, f)
 
-http_get("192.168.1.21", 8080, "/clear_cache")
+http_get(config.server_ip, config.server_port, "/clear_cache")
 
 s, clients = motd_reciever.web_setup()
 rtc = RTC()

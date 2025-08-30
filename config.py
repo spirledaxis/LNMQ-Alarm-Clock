@@ -59,4 +59,5 @@ display_timer = Neotimer(display_timeout_min*60_000)
 
 #other
 ip = '192.168.1.51'
-server_ip = '192.168.1.21:8080'
+server_ip = '192.168.1.21'
+server_port = 8080
