@@ -118,12 +118,11 @@ class Alarm:
         if self.switch.get_state():
             self.enabled = True
         else:
-            print("switch is off")
             self.enabled = False
             
         now_hour = now[4]
         now_minute = now[5]
-        print(self.hour, self.minute, self.locked, self.enabled)
+        #print(self.hour, self.minute, self.locked, self.enabled)
         if now_hour == self.hour and now_minute == self.minute and not self.locked and self.enabled:
             self.fire()
             print("firing")
@@ -244,6 +243,7 @@ if __name__ == '__main__':
     myalarm.hour = now[4]
     myalarm.enabled = True
     myalarm.ringtone = 8
+    myalarm.set_movement_by_ringtone()
     print("yo")
     switch = Switch(config.switch)
     try:
