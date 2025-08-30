@@ -1,5 +1,6 @@
 import framebuf #type: ignore
 from config import display
+
 booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -68,6 +69,7 @@ icon = framebuf.FrameBuffer(booticon, 128, 64, framebuf.MONO_VLSB)
 display.draw_sprite(icon, x=0 , y=0, w=128, h=64)
 display.present()
 
+import json
 import config
 from machine import RTC #type: ignore
 from components import Alarm, Switch, Motor
@@ -76,11 +78,60 @@ from lib.neotimer import Neotimer
 from lib.ntptime import settime
 import connect
 import mode
-import json
+import socket
+
+#TODO: switch to urequests
+#add reading from cache here
+def http_get(host, port, path):
+   
+    addr = socket.getaddrinfo(host, port)[0][-1]
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows rebinding quickly
+    s.settimeout(5)
+    
+    try:
+        s.connect(addr)
+        s.send(bytes('GET %s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
+        
+        response = b""
+        while True:
+            data = s.recv(100)
+            if data:
+                response += data
+            else:
+                break
+                
+        # Extract body from HTTP response
+        header_end = response.find(b"\r\n\r\n")
+        if header_end != -1:
+            body = response[header_end+4:]
+            return body.decode('utf-8')
+        return response.decode('utf-8')
+        
+    finally:
+        s.close()
+
+connect.do_connect()
+
+with open('motds.json', 'r') as f:
+    motds = json.load(f)
+cached_motds = http_get("192.168.1.21", 8080, "/fetch_cache")
+cached_motds = json.loads(cached_motds)
+print("result is", cached_motds)
+highest_id = motds[-1]["id"]
+new_id = highest_id + 1
+for motd in cached_motds:
+    motd['id'] = new_id
+    new_id += 1
+    motds.append(motd)
+with open('motds.json', 'w') as f:
+    motds = json.dump(motds, f)
+
+http_get("192.168.1.21", 8080, "/clear_cache")
 
 s, clients = motd_reciever.web_setup()
 rtc = RTC()
-connect.do_connect()
+
 settime()
 
 motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
@@ -91,27 +142,24 @@ display_manager = mode.DisplayManager()
 home = mode.Home(display_manager, myalarm, 'home')
 alarm = mode.SetAlarm(display_manager, myalarm, 'set_alarm')
 off = mode.DisplayOff(display_manager, 'display_off')
-display_manager.display_states = [home, alarm, off]
+message_reader = mode.MessageViewer(display_manager, 'message_reader', home)
+display_manager.display_states = [home, alarm, off, message_reader]
 display_manager.activate_state("home")
 
 prev_dur = 0
 lock_ntptime = False
 config.display.set_contrast(0)
+
+
 try:    
     while True:
         display_manager.run_current_state()
         now = rtc.datetime()
-        #webserver
+
+        # webserver
         new_motd = motd_reciever.web_server(s, clients)
         if new_motd is not None:
             home.new_motds.append(new_motd)
-
-            #preserve the motd if it didn't get read before shutdown
-            with open('motds.json', 'r') as f:
-                all_motds = json.load(f)
-            all_motds.append(new_motd)
-            with open('motds.json', 'w') as f:
-                json.dump(all_motds, f)
 
         #handle alarm
         myalarm.update(now)

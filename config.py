@@ -50,10 +50,13 @@ rev = 9
 switch = 6
 
 #timers
-display_timeout_min = 3
+display_timeout_min = 0.25
+display_messenger_timeout_min = 0.5
+messenger_cycle_time_s = 30
+messenger_icon_cycle_time_s = 10
 alarm_timeout_min = 5
 display_timer = Neotimer(display_timeout_min*60_000) 
 
 #other
 ip = '192.168.1.51'
-server_ip = '192.168.1.21'
+server_ip = '192.168.1.21:8080'

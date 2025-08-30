@@ -9,6 +9,7 @@ import json
 import framebuf #type: ignore
 from machine import Pin, RTC #type: ignore
 import network #type: ignore
+from lib.neotimer import Neotimer
 
 timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
@@ -27,7 +28,12 @@ class DisplayManager:
                 self.current_state_obj = display_state
             else:
                 display_state.active = False
-    
+
+        if self.current_state_obj.name == 'message_reader':
+            self.display_timer = Neotimer(config.display_messenger_timeout_min*60_000)
+        else:
+            self.display_timer = config.display_timer
+
     def run_current_state(self):
         self.current_state_obj.main()
         self.display.present()
@@ -35,7 +41,7 @@ class DisplayManager:
             self.activate_state("display_off")
 
 class DisplayState:
-    def __init__(self, buttonmap, name, display_manager):
+    def __init__(self, buttonmap, name, display_manager: DisplayManager):
         self.display = config.display
         self.name = name
         self.active = False
@@ -55,7 +61,8 @@ class Home(DisplayState):
             Button(config.alm_set, self.goto_alarm),
             Button(config.snze_l, self.on_snze),
             Button(config.fwd, self.read_msg),
-            Button(config.snd_fx_l, self.toggle_display)
+            Button(config.snd_fx_l, self.toggle_display),
+            Button(config.clk_set, self.on_clk)
         ]
         super().__init__(self.button_map, name, display_manager)
         
@@ -178,6 +185,8 @@ class Home(DisplayState):
         for motd in all_motds:
             #set the read motd to new: false
             if motd['id'] == self.new_motds[0]['id']:
+                print(motd, motd['id'], self.new_motds[0])
+                print("marked motd as read")
                 motd['new'] = False
                 break
         else:
@@ -201,15 +210,18 @@ class Home(DisplayState):
         if self.alarm.is_active:
             self.alarm.stop()
         else:
+            #TODO: switch to urequests
             print("turning off light")
-            host = config.server_ip
+            host = '192.168.1.21'
             path = '/toggle_light'
-            addr = socket.getaddrinfo(host, 80)[0][-1]
+            addr = socket.getaddrinfo(host, 8080)[0][-1]
             s = socket.socket()
             s.connect(addr)
             s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " + host.encode() + b"\r\nConnection: close\r\n\r\n")
             s.close()
-        
+    def on_clk(self):
+        print("switching state")
+        self.display_manager.activate_state("message_reader")
     def main(self):
         self.switch.update()
         self.clock()
@@ -244,6 +256,7 @@ class SetAlarm(DisplayState):
         self.edit_options = ['hour', 'minute', 'ampm', 'ringtone']
         self.edit_index = 0
         self.display_manager = display_manager
+
     def on_fwd(self):
         if self.selection == 'minute':
             if self.minute + 5 >= 60:
@@ -304,7 +317,7 @@ class SetAlarm(DisplayState):
         self.alarm.hour = timeutils.to_military_time(self.hour, self.ampm)
         self.alarm.minute = self.minute
         self.alarm.ringtone = self.ringtone_index
-    
+        self.alarm.set_movement_by_ringtone()
         self.display_manager.activate_state("home")
           
     def on_selection(self):
@@ -356,6 +369,179 @@ class SetAlarm(DisplayState):
         self.display_ringtone()
         self.button_logic()
 
+class MessageViewer(DisplayState):
+    
+    def __init__(self, display_manager, name, home: Home):
+        
+        self.button_map  = [
+            Button(config.fwd, self.on_fwd),
+            Button(config.clk_set, self.on_exit),
+        ]
+        super().__init__(self.button_map, name, display_manager)
+    
+        with open('motds.json', 'r') as f:
+            motds_data = json.load(f)
+        self.motds_data = motds_data
+        self.new_motds = []
+        for motd_json in motds_data:
+            if motd_json['new'] is True:
+                print('found an new motd')
+                print('appending', motd_json)
+                self.new_motds.append(motd_json)
+                print('new motds', self.new_motds)
+
+        self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+        self.switch = Switch(config.switch)
+        self.home = home
+        self.usb_power = Pin('WL_GPIO2', Pin.IN)
+        self.spacing = 12
+        self.display_manager = display_manager
+        self.invert_icons = Neotimer
+        self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s*1000)
+        self.swap_icons.start()
+        self.change_motd = Neotimer(config.messenger_cycle_time_s*1000)
+        self.change_motd.start()
+        self.invert = True
+        def make_icon(data):
+            return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
+        self.inverted_battery = make_icon([0xff, 0x80, 0xbe, 0x3e, 0x3e, 0xbe, 0x80, 0xff])
+        self.inverted_plug = make_icon([0xff, 0xef, 0x07, 0xe0, 0xe0, 0x07, 0xef, 0xff])
+        self.inverted_no_wifi = make_icon([0xff, 0x00, 0xff, 0xc0, 0xff, 0x50, 0xbf, 0x5c])
+        self.inverted_wifi = make_icon([0xff, 0x00, 0xff, 0xc0, 0xff, 0xf0, 0xff, 0xfc])
+        self.inverted_bell = make_icon([0xfc, 0xf3, 0xef, 0x1e, 0x1e, 0xef, 0xf3, 0xfc])
+        self.inverted_mail = make_icon([0x00, 0x5e, 0x6e, 0x72, 0x72, 0x6e, 0x5e, 0x00])
+
+    def on_fwd(self):
+        self.home.read_msg()
+        self.motd = self.home.motd
+
+    def on_exit(self):
+        print("exiting thje messaenger")
+        self.display_manager.activate_state("home")
+
+    def draw_motd(self):
+        motd_parts = self.motd.split(' ')
+        split_motd = []
+        len_text_line = 0
+        partial_motd = ''
+    
+        for part in motd_parts:
+            word_width = bally.measure_text(part + ' ')  # include space
+            if len_text_line + word_width <= self.display.width:
+                partial_motd += part + ' '
+                len_text_line += word_width
+            else:
+                # save current line before adding the new word
+                split_motd.append(partial_motd.rstrip())
+                # start new line with current word
+                partial_motd = part + ' '
+                len_text_line = word_width
+
+        if partial_motd:
+            split_motd.append(partial_motd.rstrip())
+
+
+        biggest_part = ''
+        for part in split_motd:
+            if len(part) > len(biggest_part):
+                biggest_part = part
+        
+        self.max_text_len = bally.measure_text(biggest_part)
+        self.paragraph_height = len(split_motd) * bally.height 
+        num_lines = len(split_motd)
+        text_y = self.starting_text_y = (self.display.height // 2 - bally.height // 2) + bally.height // 2 * (num_lines - 1)
+        
+        #self.display.draw_rectangle((self.display.width-self.max_text_len)//2, self.starting_text_y+bally.height-self.paragraph_height, self.max_text_len, self.paragraph_height, invert=False)
+        for part in split_motd:
+            part_len = bally.measure_text(part)
+            text_x = self.display.width // 2 + part_len // 2
+            self.display.draw_text(text_x, text_y, part, bally, rotate=180)
+            text_y -= bally.height
+
+        
+        
+
+        #self.display.draw_rectangle((self.display.width-max_text_len)//2, starting_text_y+bally.height-paragraph_height, max_text_len, paragraph_height)
+    # display.draw_vline(display.width//2, 0, display.height-1)
+    # display.draw_hline(0, display.height // 2, display.width)
+
+
+    def draw_icons(self):
+        num_icons = 2
+        if self.switch.get_state():
+            num_icons += 1
+        if len(self.home.new_motds) != 0:
+            num_icons += 1
+
+        total_width = (num_icons * 8) + ((num_icons - 1) * (self.spacing-8))
+        start_x = (self.display.width - total_width) // 2
+   
+        x = start_x
+        y = 1
+        padding = 4
+        if self.invert:
+            self.display.fill_rectangle(self.display.width-start_x-total_width-padding, y, total_width+2*padding, y+7, invert=False)
+            if self.switch.get_state():
+                self.display.draw_sprite(self.inverted_bell, x=x, y=y, w=8, h=8)
+                x += self.spacing
+        
+            if self.usb_power.value() == 1:
+                self.display.draw_sprite(self.inverted_plug, x=x, y=y, w=8, h=8)
+                x += self.spacing
+            else:
+                self.display.draw_sprite(self.inverted_battery, x=x, y=y, w=8, h=8)
+                x += self.spacing
+
+            if network.WLAN(network.WLAN.IF_STA).isconnected():
+                self.display.draw_sprite(self.inverted_wifi, x=x, y=y, w=8, h=8)
+                x += self.spacing
+            else:
+                self.display.draw_sprite(self.inverted_no_wifi, x=x, y=y, w=8, h=8)
+                x += self.spacing
+
+            if len(self.home.new_motds) != 0 :
+                self.display.draw_sprite(self.inverted_mail, x=x, y=y, w=8, h=8)
+                x += self.spacing
+        else:
+            self.display.fill_rectangle(0, y, self.display.width, y+8, invert=True)
+            if self.switch.get_state():
+                self.display.draw_sprite(self.home.bell_icon_fb, x=x, y=y, w=8, h=8)
+                x += self.spacing
+        
+            if self.usb_power.value() == 1:
+                self.display.draw_sprite(self.home.plug_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
+            else:
+                self.display.draw_sprite(self.home.battery_icon, x=x, y=y, w=8, h=8)
+
+            if network.WLAN(network.WLAN.IF_STA).isconnected():
+                self.display.draw_sprite(self.home.wifi_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
+            else:
+                self.display.draw_sprite(self.home.no_wifi_icon, x=x, y=y, w=8, h=8)
+        
+            if len(self.home.new_motds) != 0:
+                self.display.draw_sprite(self.home.mail_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
+       
+        #self.display.draw_vline(self.display.width//2, 0, self.display.height-1)
+        
+    def main(self):
+        self.switch.update()
+        self.display.fill_rectangle(0, 0, self.display.width, self.display.height, True)
+        self.draw_motd()
+        self.draw_icons()
+        self.button_logic()
+        if self.swap_icons.finished():
+            self.invert = not self.invert
+            self.swap_icons = Neotimer(self.swap_icons_timer)
+            self.swap_icons.start()
+        if self.change_motd.finished():
+            self.change_motd = Neotimer(self.change_motd_timer)
+            self.change_motd.start()
+            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+
+        
 class DisplayOff(DisplayState):
     def __init__(self, display_manager, name):
         self.button_map  = [Button(config.snd_fx_l, self.exit)]
@@ -376,12 +562,17 @@ if __name__ == '__main__':
     with open('motds.json', 'r') as f:
         motds_data = json.load(f)
     import config
+    from components import Alarm, Switch, Motor
 
+    motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
+    switch = Switch(config.switch)
+    myalarm = Alarm(config.alarm_timeout_min * 60, motor, config.speaker, switch)
     display_manager = DisplayManager()
-    home = Home(display_manager, 'home')
-    alarm = SetAlarm(display_manager, 'set_alarm')
+    home = Home(display_manager, myalarm, 'home')
+    alarm = SetAlarm(display_manager, myalarm, 'set_alarm')
     off = DisplayOff(display_manager, 'display_off')
-    display_manager.display_states = [home, alarm, off]
+    messenger = MessageViewer(display_manager, 'message_reader', home)
+    display_manager.display_states = [home, alarm, off, messenger]
     display_manager.activate_state("home")
     print("running mode")
     prev_dur = 0
