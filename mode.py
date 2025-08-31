@@ -11,6 +11,7 @@ from machine import Pin, RTC #type: ignore
 import network #type: ignore
 from lib.neotimer import Neotimer
 import random
+import math
 timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
 
@@ -38,6 +39,7 @@ class DisplayManager:
         self.current_state_obj.main()
         self.display.present()
         if self.display_timer.finished():
+            print("display timer expired")
             self.activate_state("display_off")
 
 class DisplayState:
@@ -84,6 +86,10 @@ class Home(DisplayState):
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
         self.rtc = RTC()
         self.alarm = alarm
+        self.angle = 0
+        self.rotate_speed = 6
+        self.size = 15
+        self.time_len = 0
         def make_icon(data):
             return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
 
@@ -163,7 +169,112 @@ class Home(DisplayState):
             self.display.draw_sprite(self.mail_icon, x=((self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8)
         else:
             self.display.fill_rectangle(x=((self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8, invert=True)
-    
+    def draw_cube(self):
+    # Function to multiply two matrices
+        def MatrixMul(matrixA, matrixB):
+            # Create a result matrix filled with zeros
+            result = [[0 for _ in range(len(matrixB[0]))] for _ in range(len(matrixA))]
+
+            # Perform matrix multiplication
+            for row in range(len(matrixA)):
+                for col in range(len(matrixB[0])):
+                    for k in range(len(matrixB)):
+                        result[row][col] += matrixA[row][k] * matrixB[k][col]
+
+            return result
+
+
+
+
+        # Define the cube's vertices
+        points = [
+        [[-self.size / 2], [self.size / 2], [self.size / 2]],
+        [[self.size / 2], [self.size / 2], [self.size / 2]],
+        [[self.size / 2], [-self.size / 2], [self.size / 2]],
+        [[-self.size / 2], [-self.size / 2], [self.size / 2]],
+
+        [[-self.size / 2], [self.size / 2], [-self.size / 2]],
+        [[self.size / 2], [self.size / 2], [-self.size / 2]],
+        [[self.size / 2], [-self.size / 2], [-self.size / 2]],
+        [[-self.size / 2], [-self.size / 2], [-self.size / 2]],
+        ]
+
+
+        # Function to calculate the X-axis rotation matrix
+        def Xrotation(angle):
+            radDegree = angle * math.pi/180 # Convert angle to radians
+            return [
+            [1, 0, 0],
+            [0, math.cos(radDegree), -math.sin(radDegree)],
+            [0, math.sin(radDegree), math.cos(radDegree)]
+            ]
+
+        # Function to calculate the Z-axis rotation matrix
+        def Zrotation(angle):
+            radDegree = angle * math.pi/180 # Convert angle to radians
+            return [
+            [math.cos(radDegree), -math.sin(radDegree), 0],
+            [math.sin(radDegree), math.cos(radDegree), 0],
+            [0, 0, 1]
+            ]
+
+        # Function to calculate the Y-axis rotation matrix
+        def Yrotation(angle):
+            radDegree = angle * math.pi/180 # Convert angle to radians
+            return [
+            [math.cos(radDegree), 0, math.sin(radDegree)],
+            [0,1, 0],
+            [-math.sin(radDegree), 0, math.cos(radDegree)]
+            ]
+
+        # Define the connections (edges) between vertices
+        connections = [
+        (0, 1), (1, 2), (2, 3), (3, 0), # Front face
+        (4, 5), (5, 6), (6, 7), (7, 4), # Back face
+        (0, 4), (1, 5), (2, 6), (3, 7), # Edges connecting front and back
+        ]
+
+        
+        # List to store the rotated and projected points
+        rotatedPoints = []
+
+        # Rotate and project each point (vertex) in 3D space
+        for point in points:
+            # Apply X, Y, and Z rotations
+            rotated = MatrixMul(Xrotation(self.angle), point)
+            rotated = MatrixMul(Yrotation(self.angle), rotated)
+            rotated = MatrixMul(Zrotation(self.angle), rotated)
+
+            # Calculate perspective projection
+            z = 200 / (200 - rotated[2][0])
+            perspective = [
+            [z, 0, 0],
+            [0, z, 0],
+            ]
+            projected = MatrixMul(perspective, rotated) # Apply perspective projection
+            rotatedPoints.append(projected) # Save the projected point
+
+
+        # Draw edges between the points
+        pointX = int(self.display.width-((self.display.width - self.time_len)//4))
+        pointY = int(self.display.height//2 + 2)
+        for start, end in connections:
+            startPoint = rotatedPoints[start] # Start vertex
+            endPoint = rotatedPoints[end] # End vertex
+
+            # Displace points to be in the middle of the screen
+            startX = int(startPoint[0][0] + pointX)
+            startY = int(startPoint[1][0] + pointY)
+            endX = int(endPoint[0][0] + pointX)
+            endY = int(endPoint[1][0] + pointY)
+
+            # Draw the edge as a line
+            self.display.draw_line(startX, startY, endX, endY)
+            # Increment the rotation angle for continuous rotation
+        
+        self.angle += self.rotate_speed * random.random()
+        if self.angle > 360:
+            self.angle = 0
     def goto_alarm(self):
         self.display_manager.activate_state("set_alarm")
     
@@ -225,6 +336,7 @@ class Home(DisplayState):
     def main(self):
         self.switch.update()
         self.clock()
+        self.draw_cube()
         self.scroll_motd()
         self.button_logic()
         self.draw_icons()
@@ -580,4 +692,4 @@ if __name__ == '__main__':
         done = display_manager.display_timer.finished()
         cycle_time = dur - prev_dur
         prev_dur = dur
-        print(config.display_timeout_min*60_000-dur, done, cycle_time)
+        #print(config.display_timeout_min*60_000-dur, done, cycle_time)
