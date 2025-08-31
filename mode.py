@@ -483,7 +483,7 @@ class SetAlarm(DisplayState):
 
 class MessageViewer(DisplayState):
     #TODO: add drift to stop burn in
-    def __init__(self, display_manager, name, home: Home):
+    def __init__(self, display_manager, home: Home, name, ):
         
         self.button_map  = [
             Button(config.fwd, self.on_fwd),

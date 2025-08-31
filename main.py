@@ -143,7 +143,7 @@ try:
     home = mode.Home(display_manager, myalarm, 'home')
     alarm = mode.SetAlarm(display_manager, myalarm, 'set_alarm')
     off = mode.DisplayOff(display_manager, 'display_off')
-    message_reader = mode.MessageViewer(display_manager, 'message_reader', home)
+    message_reader = mode.MessageViewer(display_manager, home, 'message_reader')
     display_manager.display_states = [home, alarm, off, message_reader]
     display_manager.activate_state("home")
 
