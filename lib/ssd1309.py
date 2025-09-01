@@ -1,4 +1,4 @@
-"""MicroPython SSD1309 OLED monochrom display driver."""
+"""MicroPython SSD1309 OLED monochrome display driver."""
 from math import cos, sin, pi, radians
 from micropython import const  # type: ignore
 from framebuf import FrameBuffer, GS8, MONO_HMSB, MONO_VLSB  # type: ignore
