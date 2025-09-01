@@ -23,6 +23,8 @@ class DisplayManager:
         self.display_timer.start()
         self.switch = Switch(config.switch)
     def activate_state(self, name):
+        #TODO: Timer resets itself every time it expries
+        print("called activiate state")
         for display_state in self.display_states:
             if display_state.name == name:
                 display_state.active
@@ -36,11 +38,15 @@ class DisplayManager:
         else:
             self.display_timer = Neotimer(config.display_timeout_min*60_000)
 
+        self.display_timer.start()
+
     def run_current_state(self):
         self.display.fill_rectangle(0, 0, self.display.width, self.display.height, True)
         self.current_state_obj.main()
         self.display.present()
+        print(self.display_timer.get_remaining())
         if self.display_timer.finished():
+            
             print("display timer expired")
             self.activate_state("display_off")
 
