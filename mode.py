@@ -19,8 +19,9 @@ class DisplayManager:
     def __init__(self):
         self.display_states: list[DisplayState] = None
         self.display = config.display
-        self.display_timer = config.display_timer
+        self.display_timer = Neotimer(config.display_timeout_min*60_000)
         self.display_timer.start()
+        self.switch = Switch(config.switch)
     def activate_state(self, name):
         for display_state in self.display_states:
             if display_state.name == name:
@@ -33,7 +34,7 @@ class DisplayManager:
         if self.current_state_obj.name == 'message_reader':
             self.display_timer = Neotimer(config.display_messenger_timeout_min*60_000)
         else:
-            self.display_timer = config.display_timer
+            self.display_timer = Neotimer(config.display_timeout_min*60_000)
 
     def run_current_state(self):
         self.display.fill_rectangle(0, 0, self.display.width, self.display.height, True)
@@ -43,6 +44,14 @@ class DisplayManager:
             print("display timer expired")
             self.activate_state("display_off")
 
+        for button in self.current_state_obj.button_map:
+            button.update()
+            if button.pressed:
+                print("resetting display time via button press")
+                self.display_timer.restart()
+
+        self.switch.update()
+
 class DisplayState:
     def __init__(self, buttonmap, name, display_manager: DisplayManager):
         self.display = config.display
@@ -50,13 +59,6 @@ class DisplayState:
         self.active = False
         self.button_map = buttonmap
         self.display_manager = display_manager
-    def button_logic(self):
-        for button in self.button_map:
-            button.update()
-            if button.pressed:
-                print("resetting display time via button press")
-                self.display_manager.display_timer.restart()
-
 
 class Home(DisplayState):
     def __init__(self, display_manager, alarm, name):
@@ -70,7 +72,6 @@ class Home(DisplayState):
         super().__init__(self.button_map, name, display_manager)
         
         self.display_manager = display_manager
-        self.switch = Switch(config.switch)
         self.motd_pos = 0
         self.motd = 'hello world'
         with open('motds.json', 'r') as f:
@@ -150,7 +151,7 @@ class Home(DisplayState):
             self.motd, bally, rotate=180)
 
     def draw_icons(self):
-        if self.switch.get_state():
+        if self.display_manager.switch.get_state():
             self.display.draw_sprite(self.bell_icon_fb, x=((self.display.width-self.time_len) // 4)+4, y=(self.display.height // 2) + 4, w=8, h=8)
         else:
             self.display.fill_rectangle(x=((self.display.width-self.time_len) // 4)-4, y=(self.display.height // 2) + 4, w=8, h=8, invert=True)
@@ -329,11 +330,9 @@ class Home(DisplayState):
         print("switching state")
         self.display_manager.activate_state("message_reader")
     def main(self):
-        self.switch.update()
         self.clock()
         self.draw_cube()
         self.scroll_motd()
-        self.button_logic()
         self.draw_icons()
 
 class SetAlarm(DisplayState):
@@ -473,7 +472,6 @@ class SetAlarm(DisplayState):
         self.display_alarm_time()
         self.selection_line()
         self.display_ringtone()
-        self.button_logic()
 
 class MessageViewer(DisplayState):
     #TODO: add drift to stop burn in
@@ -568,7 +566,7 @@ class MessageViewer(DisplayState):
 
     def draw_icons(self):
         num_icons = 2
-        if self.switch.get_state():
+        if self.display_manager.switch.get_state():
             num_icons += 1
         if len(self.home.new_motds) != 0:
             num_icons += 1
@@ -581,7 +579,7 @@ class MessageViewer(DisplayState):
 
         if self.invert:
             #self.display.fill_rectangle(self.display.width-start_x-total_width-padding, y, total_width+2*padding, y+7, invert=False)
-            if self.switch.get_state():
+            if self.display_manager.switch.get_state():
                 self.display.draw_sprite(self.inverted_bell, x=x, y=y, w=8, h=8)
                 x += self.spacing
         
@@ -604,7 +602,7 @@ class MessageViewer(DisplayState):
                 x += self.spacing
         else:
             self.display.fill_rectangle(0, y, self.display.width, y+8, invert=True)
-            if self.switch.get_state():
+            if self.display_manager.switch.get_state():
                 self.display.draw_sprite(self.home.bell_icon_fb, x=x, y=y, w=8, h=8)
                 x += self.spacing
         
@@ -627,10 +625,8 @@ class MessageViewer(DisplayState):
                 x += self.spacing
        
     def main(self):
-        self.switch.update()
         self.draw_motd()
         self.draw_icons()
-        self.button_logic()
         if self.swap_icons.finished():
             self.invert = not self.invert
             self.swap_icons.restart()
@@ -647,7 +643,6 @@ class DisplayOff(DisplayState):
         
     def main(self):
         self.display.sleep()
-        self.button_logic()
 
     def exit(self):
         print("on exit")
