@@ -126,9 +126,8 @@ try:
 
     settime()
 
-    motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
     switch = Switch(config.switch)
-    myalarm = Alarm(config.alarm_timeout_min * 60, motor, config.speaker, switch)
+    myalarm = Alarm(config.alarm_timeout_min * 60, config.motor, config.speaker, switch)
 
     display_manager = mode.DisplayManager()
     home = mode.Home(display_manager, myalarm, 'home')
@@ -152,13 +151,9 @@ try:
             home.new_motds.append(new_motd)
 
         #handle alarm
-        myalarm.update(now)
+        myalarm.update(now, display_manager.display, display_manager.display_timer)
 
-        if switch.get_state():
-            myalarm.enabled = True
-        else:
-            myalarm.enabled = False
-
+        #debug stuff
         dur = display_manager.display_timer.get_elapsed()
         done = display_manager.display_timer.finished()
         cycle_time = dur - prev_dur
@@ -259,5 +254,5 @@ finally:
     print("doing cleanup")
     config.speaker.cleanup()
     display.cleanup()
-    motor.stop()
+    config.motor.stop()
     print("cleanup success!")

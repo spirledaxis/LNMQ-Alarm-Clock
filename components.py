@@ -1,7 +1,6 @@
 from lib.neotimer import Neotimer
 from machine import Pin, PWM #type: ignore
 from lib.neotimer import Neotimer
-import config
 import json
 from lib import timeutils
 from movements import *
@@ -109,7 +108,7 @@ class Alarm:
         else:
             self.motor.set_movement(custom_movement)
 
-    def update(self, now):
+    def update(self, now, display, display_timer):
         """
         Args:
             now: a rtc tuple"""
@@ -124,7 +123,7 @@ class Alarm:
         now_minute = now[5]
         #print(self.hour, self.minute, self.locked, self.enabled)
         if now_hour == self.hour and now_minute == self.minute and not self.locked and self.enabled:
-            self.fire()
+            self.fire(display, display_timer)
             print("firing")
         
         elif now_hour != self.hour and now_minute != self.minute and self.locked:
@@ -143,16 +142,15 @@ class Alarm:
                 self.motor.start()
             self.motor.do_movement()
     
-    def fire(self):
+    def fire(self, display, display_timer):
         if self.locked:
             return
         
         print("alarm should go off now")
         self.locked = True
         self.is_active = True
-        config.display_timer.reset()
-        config.display.wake()
-
+        display_timer.restart()
+        display.wake()
         self.speaker.playTrack(1, self.ringtone)
         #self.motor.set_movement(self.motor_movement)
         self.timeout_timer.start()
@@ -231,25 +229,4 @@ class Switch:
     def get_state(self):
         return self.stable_state
     
-if __name__ == '__main__':
-    from machine import RTC #type: ignore
-    motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
-    switch = Switch(config.switch)
-    myalarm = Alarm(config.alarm_timeout_min * 60, motor, config.speaker, switch)
-    rtc = RTC()
-    now = rtc.datetime()
-    myalarm.minute = now[5]
-    myalarm.hour = now[4]
-    myalarm.enabled = True
-    myalarm.ringtone = 8
-    myalarm.set_movement_by_ringtone()
-    print("yo")
-    switch = Switch(config.switch)
-    try:
-        while True:
-            switch.update()
-            myalarm.update(now)
-    finally:
-        motor.stop()
-        config.speaker.cleanup()
-        config.display.cleanup()
+

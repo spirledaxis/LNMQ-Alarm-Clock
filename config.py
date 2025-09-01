@@ -1,14 +1,14 @@
 from machine import SPI, Pin #type: ignore
 from lib.ssd1309 import Display
-
 from lib.picodfplayer import DFPlayer
 from lib.neotimer import Neotimer
+from components import Motor
 #motor
 motor_l = 19
 motor_r = 18
 motor_pwm_freq = 20_000
 motor_min_pwm = 37_000
-
+motor = Motor(motor_l, motor_r, motor_pwm_freq, motor_min_pwm)
 #dfplayer
 rx = 17
 tx = 16
@@ -50,12 +50,12 @@ rev = 9
 switch = 6
 
 #timers
-display_timeout_min = 0.25
+display_timeout_min = 3
 display_messenger_timeout_min = 0.5
 messenger_cycle_time_s = 30
 messenger_icon_cycle_time_s = 10
 alarm_timeout_min = 5
-bsod_timeout_s = 5
+bsod_timeout_s = 15
 display_timer = Neotimer(display_timeout_min*60_000) 
 
 #other
