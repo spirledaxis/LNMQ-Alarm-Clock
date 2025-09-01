@@ -1,6 +1,5 @@
 import framebuf #type: ignore
 from config import display
-
 booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0xc0, 0xc0, 0x40, 0xc0, 0xc0, 
 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -83,31 +82,23 @@ import socket
 #TODO: switch to urequests
 #add reading from cache here
 def http_get(host, port, path):
-   
     addr = socket.getaddrinfo(host, port)[0][-1]
     s = socket.socket()
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows rebinding quickly
     s.settimeout(15)
-    
     try:
         s.connect(addr)
-        s.send(bytes('GET %s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, host), 'utf8'))
-        
-        response = b""
+        # HTTP/1.0 + Host header
+        s.send(b"GET %s HTTP/1.0\r\nHost: %s\r\n\r\n" % (path.encode(), host.encode()))
+        data = b""
         while True:
-            data = s.recv(100)
-            if data:
-                response += data
-            else:
+            chunk = s.recv(128)
+            if not chunk:
                 break
-                
-        # Extract body from HTTP response
-        header_end = response.find(b"\r\n\r\n")
+            data += chunk
+        header_end = data.find(b"\r\n\r\n")
         if header_end != -1:
-            body = response[header_end+4:]
-            return body.decode('utf-8')
-        return response.decode('utf-8')
-        
+            return data[header_end+4:].decode()
+        return data.decode()
     finally:
         s.close()
 
