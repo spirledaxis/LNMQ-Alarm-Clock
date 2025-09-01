@@ -36,6 +36,7 @@ class DisplayManager:
             self.display_timer = config.display_timer
 
     def run_current_state(self):
+        self.display.fill_rectangle(0, 0, self.display.width, self.display.height, True)
         self.current_state_obj.main()
         self.display.present()
         if self.display_timer.finished():
@@ -54,8 +55,8 @@ class DisplayState:
             button.update()
             if button.pressed:
                 print("resetting display time via button press")
-                self.display_manager.display_timer.reset()
-                self.display_manager.display_timer.start()
+                self.display_manager.display_timer.restart()
+
 
 class Home(DisplayState):
     def __init__(self, display_manager, alarm, name):
@@ -124,7 +125,6 @@ class Home(DisplayState):
         #origin is in the bottom right
 
         #Display the time
-        self.display.fill_rectangle(0, 0, self.display.width, self.display.height, True)
         self.display.draw_text((self.display.width+time_len) // 2, self.display.height // 2 - timefont.height // 2,
             time_text, timefont, rotate=180)
         
@@ -182,10 +182,7 @@ class Home(DisplayState):
                         result[row][col] += matrixA[row][k] * matrixB[k][col]
 
             return result
-
-
-
-
+        
         # Define the cube's vertices
         points = [
         [[-self.size / 2], [self.size / 2], [self.size / 2]],
@@ -198,7 +195,6 @@ class Home(DisplayState):
         [[self.size / 2], [-self.size / 2], [-self.size / 2]],
         [[-self.size / 2], [-self.size / 2], [-self.size / 2]],
         ]
-
 
         # Function to calculate the X-axis rotation matrix
         def Xrotation(angle):
@@ -234,7 +230,6 @@ class Home(DisplayState):
         (0, 4), (1, 5), (2, 6), (3, 7), # Edges connecting front and back
         ]
 
-        
         # List to store the rotated and projected points
         rotatedPoints = []
 
@@ -441,7 +436,6 @@ class SetAlarm(DisplayState):
         self.time_len = timefont.measure_text(time_display)
         x = (self.display.width+self.time_len) // 2
         y = self.display.height // 2 - timefont.height // 2
-        self.display.fill_rectangle(0, 0, self.display.width, self.display.height, True)
         self.display.draw_text(x, y, time_display, timefont, rotate=180)
 
     def display_ringtone(self):
@@ -506,13 +500,13 @@ class MessageViewer(DisplayState):
         self.switch = Switch(config.switch)
         self.home = home
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
-        self.spacing = 4 + 8
+        self.spacing = 4 + 8 #add 8 to compensate for the icons
         self.display_manager = display_manager
-        self.invert_icons = Neotimer
         self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s*1000)
-        self.swap_icons.start()
         self.change_motd = Neotimer(config.messenger_cycle_time_s*1000)
+        self.swap_icons.start()
         self.change_motd.start()
+
         self.invert = True
         def make_icon(data):
             return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
@@ -528,17 +522,16 @@ class MessageViewer(DisplayState):
         self.motd = self.home.motd
 
     def on_exit(self):
-        print("exiting thje messaenger")
+        print("exiting the messenger")
         self.display_manager.activate_state("home")
     
     def drift(self, min, max):
+        return NotImplementedError("You need to actually apply the drifts...")
         idk = range(min, max+1)
         offsets = [coord for coord in idk]
         return random.choice(offsets)
 
     def draw_motd(self):
-
-
         motd_parts = self.motd.split(' ')
         split_motd = []
         len_text_line = 0
@@ -564,7 +557,6 @@ class MessageViewer(DisplayState):
             if len(part) > len(biggest_part):
                 biggest_part = part
         
-
         num_lines = len(split_motd)
         text_y = (self.display.height // 2 - bally.height // 2) + bally.height // 2 * (num_lines - 1)
         
@@ -634,24 +626,19 @@ class MessageViewer(DisplayState):
                 self.display.draw_sprite(self.home.mail_icon, x=x, y=y, w=8, h=8)
                 x += self.spacing
        
-        #self.display.draw_vline(self.display.width//2, 0, self.display.height-1)
-        
     def main(self):
         self.switch.update()
-        self.display.fill_rectangle(0, 0, self.display.width, self.display.height, True)
         self.draw_motd()
         self.draw_icons()
         self.button_logic()
         if self.swap_icons.finished():
             self.invert = not self.invert
-            self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s)
-            self.swap_icons.start()
+            self.swap_icons.restart()
         if self.change_motd.finished():
-            self.change_motd = Neotimer(config.messenger_cycle_time_s)
-            self.change_motd.start()
+            self.change_motd
+            self.change_motd.restart()
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
 
-        
 class DisplayOff(DisplayState):
     def __init__(self, display_manager, name):
         self.button_map  = [Button(config.snd_fx_l, self.exit)]

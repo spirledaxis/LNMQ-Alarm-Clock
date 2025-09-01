@@ -132,6 +132,7 @@ class Alarm:
 
         if self.timeout_timer.finished():
             print("timeout reached")
+            self.timeout_timer.reset()
             self.stop()
 
         if self.is_active:
@@ -163,7 +164,6 @@ class Alarm:
         
         self.speaker.pause()
         self.motor.stop()
-        self.timeout_timer.stop()
         self.timeout_timer.reset()
         self.is_active = False
 
@@ -191,7 +191,6 @@ class Button:
             if self.is_debounced:
                 self.pressed = True
                 self.callback_func()
-                print(self.press_counter, end = ' ')
                 self.press_counter += 1
             else:
                 print("under debounce cooldown")
