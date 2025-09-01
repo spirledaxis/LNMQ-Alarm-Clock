@@ -75,7 +75,7 @@ from components import Alarm, Switch, Motor
 from motds import motd_reciever
 from lib.neotimer import Neotimer
 from lib.ntptime import settime
-import connect
+import lib.connect as connect
 import mode
 import socket
 
