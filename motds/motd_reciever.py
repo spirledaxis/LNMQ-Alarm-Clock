@@ -2,9 +2,11 @@ import socket
 import select
 import time
 import json
-from machine import RTC #type: ignore
+from machine import RTC  # type: ignore
 rtc = RTC()
 # Setup server socket
+
+
 def web_setup():
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -14,7 +16,9 @@ def web_setup():
     clients = []  # keep track of open client sockets
     return s, clients
 
-#welcome to indentation hell
+# welcome to indentation hell
+
+
 def web_server(s, clients):
     # Check for new incoming connections
     rlist, _, _ = select.select([s], [], [], 0)
@@ -43,9 +47,11 @@ def web_server(s, clients):
                     params = query.split('&')
                     for p in params:
                         if p.startswith('motd='):
-                            motd = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
+                            motd = p.split('=')[1].replace(
+                                '+', ' ').replace('%20', ' ')
                         elif p.startswith('author='):
-                            author = p.split('=')[1].replace('+', ' ').replace('%20', ' ')
+                            author = p.split('=')[1].replace(
+                                '+', ' ').replace('%20', ' ')
 
                     print(f"New data: {motd}, {author}")
 
@@ -64,29 +70,30 @@ def web_server(s, clients):
                         "time": now,
                         "new": True
                     }
-                    
+
                     data.append(newdata)
 
                     with open('motds.json', 'w') as f:
                         json.dump(data, f)
-                    
+
                     print("saved the new data")
                     cl.send(b'HTTP/1.0 200 OK\r\n\r\nMotd Recieved')
                     cl.close()
                     clients.remove(cl)
-                    
+
                     return newdata
-                        
+
                 elif 'GET /motds.json' in request:
                     with open('motds.json', 'r') as f:
                         data = json.load(f)
 
                     response_body = json.dumps(data)
-                    cl.send('HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n')
+                    cl.send(
+                        'HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n')
                     cl.send(response_body)
                     cl.close()
                     continue
-                               
+
                 else:
                     cl.send(b'HTTP/1.0 200 OK\r\n\r\nDeault response')
                     cl.close()
@@ -96,6 +103,7 @@ def web_server(s, clients):
                 print("client error:", e)
                 cl.close()
                 clients.remove(cl)
+
 
 if __name__ == '__main__':
     a, b = web_setup()

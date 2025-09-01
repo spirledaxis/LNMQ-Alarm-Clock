@@ -6,14 +6,15 @@ from lib.xglcd_font import XglcdFont
 from motds import motd_parser
 import socket
 import json
-import framebuf #type: ignore
-from machine import Pin, RTC #type: ignore
-import network #type: ignore
+import framebuf  # type: ignore
+from machine import Pin, RTC  # type: ignore
+import network  # type: ignore
 from lib.neotimer import Neotimer
 import random
 import math
 timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
+
 
 class DisplayManager:
     def __init__(self):
@@ -22,8 +23,9 @@ class DisplayManager:
         self.display_timer = Neotimer(config.display_timeout_min*60_000)
         self.display_timer.start()
         self.switch = Switch(config.switch)
+
     def activate_state(self, name):
-        #TODO: Timer resets itself every time it expries
+        # TODO: Timer resets itself every time it expries
         print("called activiate state")
         for display_state in self.display_states:
             if display_state.name == name:
@@ -34,19 +36,21 @@ class DisplayManager:
                 display_state.active = False
 
         if self.current_state_obj.name == 'message_reader':
-            self.display_timer = Neotimer(config.display_messenger_timeout_min*60_000)
+            self.display_timer = Neotimer(
+                config.display_messenger_timeout_min*60_000)
         else:
             self.display_timer = Neotimer(config.display_timeout_min*60_000)
 
         self.display_timer.start()
 
     def run_current_state(self):
-        self.display.fill_rectangle(0, 0, self.display.width, self.display.height, True)
+        self.display.fill_rectangle(
+            0, 0, self.display.width, self.display.height, True)
         self.current_state_obj.main()
         self.display.present()
         print(self.display_timer.get_remaining())
         if self.display_timer.finished():
-            
+
             print("display timer expired")
             self.activate_state("display_off")
 
@@ -58,6 +62,7 @@ class DisplayManager:
 
         self.switch.update()
 
+
 class DisplayState:
     def __init__(self, buttonmap, name, display_manager: DisplayManager):
         self.display = config.display
@@ -65,6 +70,7 @@ class DisplayState:
         self.active = False
         self.button_map = buttonmap
         self.display_manager = display_manager
+
 
 class Home(DisplayState):
     def __init__(self, display_manager, alarm, name):
@@ -76,7 +82,7 @@ class Home(DisplayState):
             Button(config.clk_set, self.on_clk)
         ]
         super().__init__(self.button_map, name, display_manager)
-        
+
         self.display_manager = display_manager
         self.motd_pos = 0
         self.motd = 'hello world'
@@ -98,15 +104,22 @@ class Home(DisplayState):
         self.rotate_speed = 6
         self.size = 15
         self.time_len = 0
+
         def make_icon(data):
             return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
 
-        self.bell_icon_fb = make_icon([0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
-        self.plug_icon = make_icon([0x00, 0x10, 0xf8, 0x1f, 0x1f, 0xf8, 0x10, 0x00])
-        self.battery_icon = make_icon([0x00, 0x3f, 0x21, 0xe1, 0xe1, 0x21, 0x3f, 0x00])
-        self.wifi_icon = make_icon([0x00, 0xff, 0x00, 0x3f, 0x00, 0x0f, 0x00, 0x03])
-        self.no_wifi_icon = make_icon([0x00, 0xff, 0x00, 0x3f, 0x00, 0xaf, 0x40, 0xa3])
-        self.mail_icon = make_icon([0xff, 0xa1, 0x91, 0x8d, 0x8d, 0x91, 0xa1, 0xff])
+        self.bell_icon_fb = make_icon(
+            [0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
+        self.plug_icon = make_icon(
+            [0x00, 0x10, 0xf8, 0x1f, 0x1f, 0xf8, 0x10, 0x00])
+        self.battery_icon = make_icon(
+            [0x00, 0x3f, 0x21, 0xe1, 0xe1, 0x21, 0x3f, 0x00])
+        self.wifi_icon = make_icon(
+            [0x00, 0xff, 0x00, 0x3f, 0x00, 0x0f, 0x00, 0x03])
+        self.no_wifi_icon = make_icon(
+            [0x00, 0xff, 0x00, 0x3f, 0x00, 0xaf, 0x40, 0xa3])
+        self.mail_icon = make_icon(
+            [0xff, 0xa1, 0x91, 0x8d, 0x8d, 0x91, 0xa1, 0xff])
 
     def clock(self):
         now = self.rtc.datetime()
@@ -116,30 +129,30 @@ class Home(DisplayState):
         hour = now[4]
         minute = now[5]
         second = now[6]
-        
+
         hour_ampm, _ = timeutils.convert_to_ampm(hour)
         time_text = f'{hour_ampm}:{minute:02}'
         time_len = timefont.measure_text(time_text)
 
         self.time_len = timefont.measure_text(time_text)
-        #TODO: 1 is tuesday, supposedely. Idk if the tuple is weird or my function is cooked, thats why theres +1 for now. Fix later.
+        # TODO: 1 is tuesday, supposedely. Idk if the tuple is weird or my function is cooked, thats why theres +1 for now. Fix later.
         date_text = f'{timeutils.daynum_to_daystr(day_name_int+1)} | {timeutils.monthnum_to_monthstr(month)} {month_day}'
         date_text_len = bally.measure_text(date_text)
         if date_text_len >= 128:
             date_text = f'{timeutils.daynum_to_daystr(day_name_int+1)} | {timeutils.monthnum_to_monthabbr(month)} {month_day}'
             date_text_len = bally.measure_text(date_text)
 
-        #origin is in the bottom right
+        # origin is in the bottom right
 
-        #Display the time
+        # Display the time
         self.display.draw_text((self.display.width+time_len) // 2, self.display.height // 2 - timefont.height // 2,
-            time_text, timefont, rotate=180)
-        
-        #display weekday, month, and mday
+                               time_text, timefont, rotate=180)
+
+        # display weekday, month, and mday
         self.display.draw_text((self.display.width + date_text_len) // 2, ((self.display.height // 2) - timefont.height // 2)-10,
-            date_text, bally, rotate=180)
-        
-        #display seconds bar
+                               date_text, bally, rotate=180)
+
+        # display seconds bar
         len_line = int((second/60)*127 + 1)
         self.display.draw_hline(127-len_line, 63, len_line)
         self.display.draw_hline(127-len_line, 62, len_line)
@@ -152,35 +165,44 @@ class Home(DisplayState):
         else:
             self.motd_pos += 1
 
-
         self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
-            self.motd, bally, rotate=180)
+                               self.motd, bally, rotate=180)
 
     def draw_icons(self):
         if self.display_manager.switch.get_state():
-            self.display.draw_sprite(self.bell_icon_fb, x=((self.display.width-self.time_len) // 4)+4, y=(self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(self.bell_icon_fb, x=(
+                (self.display.width-self.time_len) // 4)+4, y=(self.display.height // 2) + 4, w=8, h=8)
         else:
-            self.display.fill_rectangle(x=((self.display.width-self.time_len) // 4)-4, y=(self.display.height // 2) + 4, w=8, h=8, invert=True)
-        
+            self.display.fill_rectangle(x=((self.display.width-self.time_len) // 4)-4, y=(
+                self.display.height // 2) + 4, w=8, h=8, invert=True)
+
         if self.usb_power.value() == 1:
-            self.display.draw_sprite(self.plug_icon, x=((self.display.width-self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
+            self.display.draw_sprite(self.plug_icon, x=(
+                (self.display.width-self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
         else:
-            self.display.draw_sprite(self.battery_icon, x=((self.display.width-self.time_len) // 4) + 4, y=(self.display.height // 2) - 8 , w=8, h=8)
-        
+            self.display.draw_sprite(self.battery_icon, x=(
+                (self.display.width-self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
+
         if network.WLAN(network.WLAN.IF_STA).isconnected():
-            self.display.draw_sprite(self.wifi_icon, x=((self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(self.wifi_icon, x=(
+                (self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
         else:
-            self.display.draw_sprite(self.no_wifi_icon, x=((self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
-        
+            self.display.draw_sprite(self.no_wifi_icon, x=(
+                (self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
+
         if len(self.new_motds) != 0:
-            self.display.draw_sprite(self.mail_icon, x=((self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8)
+            self.display.draw_sprite(self.mail_icon, x=(
+                (self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8)
         else:
-            self.display.fill_rectangle(x=((self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8, invert=True)
+            self.display.fill_rectangle(x=((self.display.width-self.time_len) // 4) - 8, y=(
+                self.display.height // 2) - 8, w=8, h=8, invert=True)
+
     def draw_cube(self):
-    # Function to multiply two matrices
+        # Function to multiply two matrices
         def MatrixMul(matrixA, matrixB):
             # Create a result matrix filled with zeros
-            result = [[0 for _ in range(len(matrixB[0]))] for _ in range(len(matrixA))]
+            result = [[0 for _ in range(len(matrixB[0]))]
+                      for _ in range(len(matrixA))]
 
             # Perform matrix multiplication
             for row in range(len(matrixA)):
@@ -189,52 +211,52 @@ class Home(DisplayState):
                         result[row][col] += matrixA[row][k] * matrixB[k][col]
 
             return result
-        
+
         # Define the cube's vertices
         points = [
-        [[-self.size / 2], [self.size / 2], [self.size / 2]],
-        [[self.size / 2], [self.size / 2], [self.size / 2]],
-        [[self.size / 2], [-self.size / 2], [self.size / 2]],
-        [[-self.size / 2], [-self.size / 2], [self.size / 2]],
+            [[-self.size / 2], [self.size / 2], [self.size / 2]],
+            [[self.size / 2], [self.size / 2], [self.size / 2]],
+            [[self.size / 2], [-self.size / 2], [self.size / 2]],
+            [[-self.size / 2], [-self.size / 2], [self.size / 2]],
 
-        [[-self.size / 2], [self.size / 2], [-self.size / 2]],
-        [[self.size / 2], [self.size / 2], [-self.size / 2]],
-        [[self.size / 2], [-self.size / 2], [-self.size / 2]],
-        [[-self.size / 2], [-self.size / 2], [-self.size / 2]],
+            [[-self.size / 2], [self.size / 2], [-self.size / 2]],
+            [[self.size / 2], [self.size / 2], [-self.size / 2]],
+            [[self.size / 2], [-self.size / 2], [-self.size / 2]],
+            [[-self.size / 2], [-self.size / 2], [-self.size / 2]],
         ]
 
         # Function to calculate the X-axis rotation matrix
         def Xrotation(angle):
-            radDegree = angle * math.pi/180 # Convert angle to radians
+            radDegree = angle * math.pi/180  # Convert angle to radians
             return [
-            [1, 0, 0],
-            [0, math.cos(radDegree), -math.sin(radDegree)],
-            [0, math.sin(radDegree), math.cos(radDegree)]
+                [1, 0, 0],
+                [0, math.cos(radDegree), -math.sin(radDegree)],
+                [0, math.sin(radDegree), math.cos(radDegree)]
             ]
 
         # Function to calculate the Z-axis rotation matrix
         def Zrotation(angle):
-            radDegree = angle * math.pi/180 # Convert angle to radians
+            radDegree = angle * math.pi/180  # Convert angle to radians
             return [
-            [math.cos(radDegree), -math.sin(radDegree), 0],
-            [math.sin(radDegree), math.cos(radDegree), 0],
-            [0, 0, 1]
+                [math.cos(radDegree), -math.sin(radDegree), 0],
+                [math.sin(radDegree), math.cos(radDegree), 0],
+                [0, 0, 1]
             ]
 
         # Function to calculate the Y-axis rotation matrix
         def Yrotation(angle):
-            radDegree = angle * math.pi/180 # Convert angle to radians
+            radDegree = angle * math.pi/180  # Convert angle to radians
             return [
-            [math.cos(radDegree), 0, math.sin(radDegree)],
-            [0,1, 0],
-            [-math.sin(radDegree), 0, math.cos(radDegree)]
+                [math.cos(radDegree), 0, math.sin(radDegree)],
+                [0, 1, 0],
+                [-math.sin(radDegree), 0, math.cos(radDegree)]
             ]
 
         # Define the connections (edges) between vertices
         connections = [
-        (0, 1), (1, 2), (2, 3), (3, 0), # Front face
-        (4, 5), (5, 6), (6, 7), (7, 4), # Back face
-        (0, 4), (1, 5), (2, 6), (3, 7), # Edges connecting front and back
+            (0, 1), (1, 2), (2, 3), (3, 0),  # Front face
+            (4, 5), (5, 6), (6, 7), (7, 4),  # Back face
+            (0, 4), (1, 5), (2, 6), (3, 7),  # Edges connecting front and back
         ]
 
         # List to store the rotated and projected points
@@ -250,19 +272,20 @@ class Home(DisplayState):
             # Calculate perspective projection
             z = 200 / (200 - rotated[2][0])
             perspective = [
-            [z, 0, 0],
-            [0, z, 0],
+                [z, 0, 0],
+                [0, z, 0],
             ]
-            projected = MatrixMul(perspective, rotated) # Apply perspective projection
-            rotatedPoints.append(projected) # Save the projected point
-
+            # Apply perspective projection
+            projected = MatrixMul(perspective, rotated)
+            rotatedPoints.append(projected)  # Save the projected point
 
         # Draw edges between the points
-        pointX = int(self.display.width-((self.display.width - self.time_len)//4))
+        pointX = int(self.display.width -
+                     ((self.display.width - self.time_len)//4))
         pointY = int(self.display.height//2 + 2)
         for start, end in connections:
-            startPoint = rotatedPoints[start] # Start vertex
-            endPoint = rotatedPoints[end] # End vertex
+            startPoint = rotatedPoints[start]  # Start vertex
+            endPoint = rotatedPoints[end]  # End vertex
 
             # Displace points to be in the middle of the screen
             startX = int(startPoint[0][0] + pointX)
@@ -273,30 +296,31 @@ class Home(DisplayState):
             # Draw the edge as a line
             self.display.draw_line(startX, startY, endX, endY)
             # Increment the rotation angle for continuous rotation
-        
+
         self.angle += self.rotate_speed * random.random()
         if self.angle > 360:
             self.angle = 0
+
     def goto_alarm(self):
         self.display_manager.activate_state("set_alarm")
-    
+
     def toggle_display(self):
         if not self.display.on:
             self.display.wake()
         else:
             config.display.sleep()
-            
+
     def read_msg(self):
         print("reading message")
         if len(self.new_motds) == 0:
             print("there are no new motds")
             return
-        
+
         with open('motds.json', 'r') as f:
             all_motds = json.load(f)
 
         for motd in all_motds:
-            #set the read motd to new: false
+            # set the read motd to new: false
             if motd['id'] == self.new_motds[0]['id']:
                 print(motd, motd['id'], self.new_motds[0])
                 print("marked motd as read")
@@ -305,7 +329,7 @@ class Home(DisplayState):
         else:
             print("there are no new motds (2)")
             return
-            
+
         motd = self.new_motds[0]
         self.motd = f"{motd['motd']} @{motd['author']}"
         self.motd_pos = 0
@@ -315,35 +339,39 @@ class Home(DisplayState):
         with open('motds.json', 'w') as f:
             json.dump(all_motds, f)
 
-        #then, reload the data
+        # then, reload the data
         with open('motds.json', 'r') as f:
             self.motds_data = json.load(f)
-    
+
     def on_snze(self):
         if self.alarm.is_active:
             self.alarm.stop()
         else:
-            #TODO: switch to urequests
+            # TODO: switch to urequests
             print("turning off light")
             host = config.server_ip
             path = '/toggle_light'
             addr = socket.getaddrinfo(host, config.server_port)[0][-1]
             s = socket.socket()
             s.connect(addr)
-            s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " + host.encode() + b"\r\nConnection: close\r\n\r\n")
+            s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " +
+                   host.encode() + b"\r\nConnection: close\r\n\r\n")
             s.close()
+
     def on_clk(self):
         print("switching state")
         self.display_manager.activate_state("message_reader")
+
     def main(self):
         self.clock()
         self.draw_cube()
         self.scroll_motd()
         self.draw_icons()
 
+
 class SetAlarm(DisplayState):
     def __init__(self, display_manager, alarm, name):
-        self.button_map  = [
+        self.button_map = [
             Button(config.fwd, self.on_fwd),
             Button(config.rev, self.on_rev),
             Button(config.alm_set, self.on_exit),
@@ -363,7 +391,8 @@ class SetAlarm(DisplayState):
 
         self.ringtone_len = len(self.ringtone_json)
         self.selection = 'minute'
-        self.ringtone_y = self.display.height // 2 + timefont.height // 2 + bally.height // 2
+        self.ringtone_y = self.display.height // 2 + \
+            timefont.height // 2 + bally.height // 2
         self.alarm = alarm
         self.edit_options = ['hour', 'minute', 'ampm', 'ringtone']
         self.edit_index = 0
@@ -381,7 +410,7 @@ class SetAlarm(DisplayState):
             else:
                 self.hour += 1
         elif self.selection == 'ringtone':
-            if self.ringtone_index +1 > self.ringtone_len:
+            if self.ringtone_index + 1 > self.ringtone_len:
                 self.ringtone_index = 1
             else:
                 self.ringtone_index += 1
@@ -425,13 +454,13 @@ class SetAlarm(DisplayState):
         }]
         with open('alarms.json', 'w') as f:
             json.dump(data, f)
-        
+
         self.alarm.hour = timeutils.to_military_time(self.hour, self.ampm)
         self.alarm.minute = self.minute
         self.alarm.ringtone = self.ringtone_index
         self.alarm.set_movement_by_ringtone()
         self.display_manager.activate_state("home")
-          
+
     def on_selection(self):
         self.edit_index = (self.edit_index + 1) % len(self.edit_options)
         self.selection = self.edit_options[self.edit_index]
@@ -445,9 +474,9 @@ class SetAlarm(DisplayState):
 
     def display_ringtone(self):
         ringtone_text = f"{self.ringtone_index}. {self.ringtone_json[self.ringtone_index-1]['description']}"
-        
+
         self.display.draw_text((self.display.width + self.time_len) // 2, self.ringtone_y,
-        ringtone_text, bally, rotate=180)
+                               ringtone_text, bally, rotate=180)
 
     def selection_line(self):
         x = (self.display.width+self.time_len) // 2
@@ -456,39 +485,46 @@ class SetAlarm(DisplayState):
         hour = str(self.hour)
         minute = f"{self.minute:02}"
         hour_len = timefont.measure_text(hour)
-        colon_len = timefont.measure_text(":") 
+        colon_len = timefont.measure_text(":")
         minute_len = timefont.measure_text(minute)
         ampm_len = timefont.measure_text(self.ampm)
         space_len = timefont.measure_text(' ')
 
         if self.selection == 'hour':
             self.display.draw_hline(x - hour_len, y-3, hour_len)
-            self.display.draw_hline(x - hour_len - colon_len - minute_len, y-3, minute_len, invert=True)
+            self.display.draw_hline(
+                x - hour_len - colon_len - minute_len, y-3, minute_len, invert=True)
         elif self.selection == 'minute':
-            self.display.draw_hline(x - hour_len - colon_len - minute_len, y-3, minute_len)
+            self.display.draw_hline(
+                x - hour_len - colon_len - minute_len, y-3, minute_len)
             self.display.draw_hline(x - hour_len, y-3, hour_len, invert=True)
         elif self.selection == 'ampm':
-            self.display.draw_hline(x - hour_len - colon_len - minute_len - space_len -ampm_len, y-3, ampm_len)
-            self.display.draw_hline(x - hour_len - colon_len - minute_len, y-3, minute_len, invert=True)
+            self.display.draw_hline(
+                x - hour_len - colon_len - minute_len - space_len - ampm_len, y-3, ampm_len)
+            self.display.draw_hline(
+                x - hour_len - colon_len - minute_len, y-3, minute_len, invert=True)
         elif self.selection == 'ringtone':
-            self.display.draw_vline((self.display.width + self.time_len) // 2, self.ringtone_y, bally.height)
-            self.display.draw_hline(x - hour_len - colon_len - minute_len - space_len -ampm_len, y-3, ampm_len, invert=True)
+            self.display.draw_vline(
+                (self.display.width + self.time_len) // 2, self.ringtone_y, bally.height)
+            self.display.draw_hline(
+                x - hour_len - colon_len - minute_len - space_len - ampm_len, y-3, ampm_len, invert=True)
 
     def main(self):
         self.display_alarm_time()
         self.selection_line()
         self.display_ringtone()
 
+
 class MessageViewer(DisplayState):
-    #TODO: add drift to stop burn in
+    # TODO: add drift to stop burn in
     def __init__(self, display_manager, home: Home, name, ):
-        
-        self.button_map  = [
+
+        self.button_map = [
             Button(config.fwd, self.on_fwd),
             Button(config.clk_set, self.on_exit),
         ]
         super().__init__(self.button_map, name, display_manager)
-    
+
         with open('motds.json', 'r') as f:
             motds_data = json.load(f)
         self.motds_data = motds_data
@@ -504,7 +540,7 @@ class MessageViewer(DisplayState):
         self.switch = Switch(config.switch)
         self.home = home
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
-        self.spacing = 4 + 8 #add 8 to compensate for the icons
+        self.spacing = 4 + 8  # add 8 to compensate for the icons
         self.display_manager = display_manager
         self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s*1000)
         self.change_motd = Neotimer(config.messenger_cycle_time_s*1000)
@@ -512,14 +548,21 @@ class MessageViewer(DisplayState):
         self.change_motd.start()
 
         self.invert = True
+
         def make_icon(data):
             return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
-        self.inverted_battery = make_icon([0xff, 0x80, 0xbe, 0x3e, 0x3e, 0xbe, 0x80, 0xff])
-        self.inverted_plug = make_icon([0xff, 0xef, 0x07, 0xe0, 0xe0, 0x07, 0xef, 0xff])
-        self.inverted_no_wifi = make_icon([0xff, 0x00, 0xff, 0xc0, 0xff, 0x50, 0xbf, 0x5c])
-        self.inverted_wifi = make_icon([0xff, 0x00, 0xff, 0xc0, 0xff, 0xf0, 0xff, 0xfc])
-        self.inverted_bell = make_icon([0xfc, 0xf3, 0xef, 0x1e, 0x1e, 0xef, 0xf3, 0xfc])
-        self.inverted_mail = make_icon([0x00, 0x5e, 0x6e, 0x72, 0x72, 0x6e, 0x5e, 0x00])
+        self.inverted_battery = make_icon(
+            [0xff, 0x80, 0xbe, 0x3e, 0x3e, 0xbe, 0x80, 0xff])
+        self.inverted_plug = make_icon(
+            [0xff, 0xef, 0x07, 0xe0, 0xe0, 0x07, 0xef, 0xff])
+        self.inverted_no_wifi = make_icon(
+            [0xff, 0x00, 0xff, 0xc0, 0xff, 0x50, 0xbf, 0x5c])
+        self.inverted_wifi = make_icon(
+            [0xff, 0x00, 0xff, 0xc0, 0xff, 0xf0, 0xff, 0xfc])
+        self.inverted_bell = make_icon(
+            [0xfc, 0xf3, 0xef, 0x1e, 0x1e, 0xef, 0xf3, 0xfc])
+        self.inverted_mail = make_icon(
+            [0x00, 0x5e, 0x6e, 0x72, 0x72, 0x6e, 0x5e, 0x00])
 
     def on_fwd(self):
         self.home.read_msg()
@@ -528,7 +571,7 @@ class MessageViewer(DisplayState):
     def on_exit(self):
         print("exiting the messenger")
         self.display_manager.activate_state("home")
-    
+
     def drift(self, min, max):
         return NotImplementedError("You need to actually apply the drifts...")
         idk = range(min, max+1)
@@ -540,7 +583,7 @@ class MessageViewer(DisplayState):
         split_motd = []
         len_text_line = 0
         partial_motd = ''
-    
+
         for part in motd_parts:
             word_width = bally.measure_text(part + ' ')  # include space
             if len_text_line + word_width <= self.display.width:
@@ -560,10 +603,11 @@ class MessageViewer(DisplayState):
         for part in split_motd:
             if len(part) > len(biggest_part):
                 biggest_part = part
-        
+
         num_lines = len(split_motd)
-        text_y = (self.display.height // 2 - bally.height // 2) + bally.height // 2 * (num_lines - 1)
-        
+        text_y = (self.display.height // 2 - bally.height // 2) + \
+            bally.height // 2 * (num_lines - 1)
+
         for part in split_motd:
             part_len = bally.measure_text(part)
             text_x = self.display.width // 2 + part_len // 2
@@ -579,57 +623,70 @@ class MessageViewer(DisplayState):
 
         total_width = (num_icons * 8) + ((num_icons - 1) * (self.spacing-8))
         start_x = (self.display.width - total_width) // 2
-   
+
         x = start_x
         y = 1
 
         if self.invert:
             #self.display.fill_rectangle(self.display.width-start_x-total_width-padding, y, total_width+2*padding, y+7, invert=False)
             if self.display_manager.switch.get_state():
-                self.display.draw_sprite(self.inverted_bell, x=x, y=y, w=8, h=8)
+                self.display.draw_sprite(
+                    self.inverted_bell, x=x, y=y, w=8, h=8)
                 x += self.spacing
-        
+
             if self.usb_power.value() == 1:
-                self.display.draw_sprite(self.inverted_plug, x=x, y=y, w=8, h=8)
+                self.display.draw_sprite(
+                    self.inverted_plug, x=x, y=y, w=8, h=8)
                 x += self.spacing
             else:
-                self.display.draw_sprite(self.inverted_battery, x=x, y=y, w=8, h=8)
+                self.display.draw_sprite(
+                    self.inverted_battery, x=x, y=y, w=8, h=8)
                 x += self.spacing
 
             if network.WLAN(network.WLAN.IF_STA).isconnected():
-                self.display.draw_sprite(self.inverted_wifi, x=x, y=y, w=8, h=8)
+                self.display.draw_sprite(
+                    self.inverted_wifi, x=x, y=y, w=8, h=8)
                 x += self.spacing
             else:
-                self.display.draw_sprite(self.inverted_no_wifi, x=x, y=y, w=8, h=8)
-                x += self.spacing
-
-            if len(self.home.new_motds) != 0 :
-                self.display.draw_sprite(self.inverted_mail, x=x, y=y, w=8, h=8)
-                x += self.spacing
-        else:
-            self.display.fill_rectangle(0, y, self.display.width, y+8, invert=True)
-            if self.display_manager.switch.get_state():
-                self.display.draw_sprite(self.home.bell_icon_fb, x=x, y=y, w=8, h=8)
-                x += self.spacing
-        
-            if self.usb_power.value() == 1:
-                self.display.draw_sprite(self.home.plug_icon, x=x, y=y, w=8, h=8)
-                x += self.spacing
-            else:
-                self.display.draw_sprite(self.home.battery_icon, x=x, y=y, w=8, h=8)
-                x += self.spacing
-
-            if network.WLAN(network.WLAN.IF_STA).isconnected():
-                self.display.draw_sprite(self.home.wifi_icon, x=x, y=y, w=8, h=8)
-                x += self.spacing
-            else:
-                self.display.draw_sprite(self.home.no_wifi_icon, x=x, y=y, w=8, h=8)
+                self.display.draw_sprite(
+                    self.inverted_no_wifi, x=x, y=y, w=8, h=8)
                 x += self.spacing
 
             if len(self.home.new_motds) != 0:
-                self.display.draw_sprite(self.home.mail_icon, x=x, y=y, w=8, h=8)
+                self.display.draw_sprite(
+                    self.inverted_mail, x=x, y=y, w=8, h=8)
                 x += self.spacing
-       
+        else:
+            self.display.fill_rectangle(
+                0, y, self.display.width, y+8, invert=True)
+            if self.display_manager.switch.get_state():
+                self.display.draw_sprite(
+                    self.home.bell_icon_fb, x=x, y=y, w=8, h=8)
+                x += self.spacing
+
+            if self.usb_power.value() == 1:
+                self.display.draw_sprite(
+                    self.home.plug_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
+            else:
+                self.display.draw_sprite(
+                    self.home.battery_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
+
+            if network.WLAN(network.WLAN.IF_STA).isconnected():
+                self.display.draw_sprite(
+                    self.home.wifi_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
+            else:
+                self.display.draw_sprite(
+                    self.home.no_wifi_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
+
+            if len(self.home.new_motds) != 0:
+                self.display.draw_sprite(
+                    self.home.mail_icon, x=x, y=y, w=8, h=8)
+                x += self.spacing
+
     def main(self):
         self.draw_motd()
         self.draw_icons()
@@ -641,20 +698,22 @@ class MessageViewer(DisplayState):
             self.change_motd.restart()
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
 
+
 class DisplayOff(DisplayState):
     def __init__(self, display_manager, name):
-        self.button_map  = [Button(config.snd_fx_l, self.exit)]
+        self.button_map = [Button(config.snd_fx_l, self.exit)]
         self.display_manager = display_manager
         super().__init__(self.button_map, name, display_manager)
-        
+
     def main(self):
         self.display.sleep()
 
     def exit(self):
         print("on exit")
         self.display.wake()
-        #self.display_manager.display_timer.reset() # buttons already do this
+        # self.display_manager.display_timer.reset() # buttons already do this
         self.display_manager.activate_state("home")
+
 
 if __name__ == '__main__':
     with open('motds.json', 'r') as f:
@@ -662,9 +721,11 @@ if __name__ == '__main__':
     import config
     from components import Alarm, Switch, Motor
 
-    motor = Motor(config.motor_l, config.motor_r, config.motor_pwm_freq, config.motor_min_pwm)
+    motor = Motor(config.motor_l, config.motor_r,
+                  config.motor_pwm_freq, config.motor_min_pwm)
     switch = Switch(config.switch)
-    myalarm = Alarm(config.alarm_timeout_min * 60, motor, config.speaker, switch)
+    myalarm = Alarm(config.alarm_timeout_min * 60,
+                    motor, config.speaker, switch)
     display_manager = DisplayManager()
     home = Home(display_manager, myalarm, 'home')
     alarm = SetAlarm(display_manager, myalarm, 'set_alarm')

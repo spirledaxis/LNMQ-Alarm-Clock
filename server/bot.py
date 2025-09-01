@@ -1,4 +1,4 @@
-#to be run on a docker container
+# to be run on a docker container
 import interactions
 from interactions import slash_command, slash_option, OptionType, SlashContext, Client, Intents, BrandColors
 import subprocess
@@ -16,12 +16,13 @@ pico_ip = '192.168.1.51'
 server_ip = '192.168.1.21'
 bot = Client(intents=Intents.DEFAULT, send_command_tracebacks=True)
 
+
 @slash_command(name='message', scopes=servers)
 @slash_option(
-        name='message',
-        description='',
-        opt_type=OptionType.STRING,
-        required=True
+    name='message',
+    description='',
+    opt_type=OptionType.STRING,
+    required=True
 )
 @slash_option(
     name='show_name',
@@ -29,7 +30,6 @@ bot = Client(intents=Intents.DEFAULT, send_command_tracebacks=True)
     opt_type=OptionType.BOOLEAN,
     required=False
 )
-
 async def send_message(ctx: SlashContext, message: str, show_name=True):
     await ctx.defer()
     if show_name:
@@ -42,7 +42,7 @@ async def send_message(ctx: SlashContext, message: str, show_name=True):
     regex = r'[^ -~]| {2,}|_'
     matches_regex = re.findall(regex, message)
     if matches_regex != []:
-        for i,v in enumerate(matches_regex):
+        for i, v in enumerate(matches_regex):
             if ' ' in v:
                 matches_regex[i] = 'double/more spaces'
 
@@ -62,26 +62,27 @@ async def send_message(ctx: SlashContext, message: str, show_name=True):
         """
 
         embed = interactions.Embed(
-        title="Invalid characters",
-        description=textwrap.dedent(fail_message),
-        color=BrandColors.YELLOW
+            title="Invalid characters",
+            description=textwrap.dedent(fail_message),
+            color=BrandColors.YELLOW
         )
         await ctx.send(embed=embed)
         return
 
     if len(message) > 100:
         embed = interactions.Embed(
-        title="Too long",
-        description="Keep message under 100 characters.",
-        color=BrandColors.YELLOW
+            title="Too long",
+            description="Keep message under 100 characters.",
+            color=BrandColors.YELLOW
         )
         await ctx.send(embed=embed)
         return
-    
+
     try:
         print("doing smth")
         message_format = message.replace(' ', '+')
-        subprocess.run([f"curl", f"http://{pico_ip}/?motd={message_format}&author={username}"], check=True, timeout=3)
+        subprocess.run(
+            [f"curl", f"http://{pico_ip}/?motd={message_format}&author={username}"], check=True, timeout=3)
         print("done")
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
         print("gurt")
@@ -113,23 +114,23 @@ async def send_message(ctx: SlashContext, message: str, show_name=True):
             )
             with open('log.log', 'a') as f:
                 f.write(f'{e}\n')
-        
+
             await ctx.send(embed=embed)
 
         else:
             print("yeah")
             embed = interactions.Embed(
-            title="Message sent!",
-            description="Sent message successfully! However, the alarm clock is offline, so it was sent to the server cache instead. The clock will get the message when it boots again.",
-            color=BrandColors.GREEN
+                title="Message sent!",
+                description="Sent message successfully! However, the alarm clock is offline, so it was sent to the server cache instead. The clock will get the message when it boots again.",
+                color=BrandColors.GREEN
             )
             await ctx.send(embed=embed)
             print("good 2")
     else:
         embed = interactions.Embed(
-        title="Message sent!",
-        description="Sent message successfully!",
-        color=BrandColors.GREEN
+            title="Message sent!",
+            description="Sent message successfully!",
+            color=BrandColors.GREEN
         )
         await ctx.send(embed=embed)
 

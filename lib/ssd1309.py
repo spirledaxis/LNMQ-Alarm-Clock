@@ -104,25 +104,25 @@ class Display(object):
         self.on = True
         # Send initialization commands
         for cmd in (
-                    self.DISPLAY_OFF,
-                    self.DISPLAY_CLOCK_DIV, 0x80,
-                    self.MUX_RATIO, self.height - 1,
-                    self.DISPLAY_OFFSET, 0x00,
-                    self.DISPLAY_START_LINE,
-                    self.CHARGE_PUMP, 0x14,
-                    self.MEMORY_ADDRESSING_MODE, 0x00,
-                    self.SEGMENT_MAP_FLIP if flip else self.SEGMENT_MAP_REMAP,
-                    self.COM_OUTPUT_FLIP if flip else self.COM_OUTPUT_NORMAL,
-                    self.COM_PINS_HW_CFG, 0x02 if (self.height == 32 or
-                                                   self.height == 16) and
-                                                  (self.width != 64)
-                    else 0x12,
-                    self.CONTRAST_CONTROL, 0xFF,
-                    self.PRECHARGE_PERIOD, 0xF1,
-                    self. VCOM_DESELECT_LEVEL, 0x40,
-                    self.ENTIRE_DISPLAY_ON,  # output follows RAM contents
-                    self.INVERSION_OFF,  # not inverted
-                    self.DISPLAY_ON):  # on
+                self.DISPLAY_OFF,
+                self.DISPLAY_CLOCK_DIV, 0x80,
+                self.MUX_RATIO, self.height - 1,
+                self.DISPLAY_OFFSET, 0x00,
+                self.DISPLAY_START_LINE,
+                self.CHARGE_PUMP, 0x14,
+                self.MEMORY_ADDRESSING_MODE, 0x00,
+                self.SEGMENT_MAP_FLIP if flip else self.SEGMENT_MAP_REMAP,
+                self.COM_OUTPUT_FLIP if flip else self.COM_OUTPUT_NORMAL,
+                self.COM_PINS_HW_CFG, 0x02 if (self.height == 32 or
+                                               self.height == 16) and
+                (self.width != 64)
+                else 0x12,
+                self.CONTRAST_CONTROL, 0xFF,
+                self.PRECHARGE_PERIOD, 0xF1,
+                self. VCOM_DESELECT_LEVEL, 0x40,
+                self.ENTIRE_DISPLAY_ON,  # output follows RAM contents
+                self.INVERSION_OFF,  # not inverted
+                self.DISPLAY_ON):  # on
             self.write_cmd(cmd)
 
         self.clear_buffers()
@@ -770,7 +770,7 @@ class Display(object):
     def is_off_grid(self, xmin, ymin, xmax, ymax):
         if not self.offscreen_warnings:
             return False
-        
+
         """Check if coordinates extend past display boundaries.
 
         Args:
@@ -888,6 +888,7 @@ class Display(object):
         """Put display to sleep."""
         self.write_cmd(self.DISPLAY_OFF)
         self.on = False
+
     def scroll_start(self):
         """Activates scrolling after setup."""
         self.write_cmd(self.SCROLL_ACTIVATE)
@@ -1005,7 +1006,7 @@ class Display(object):
         """Wake display from sleep."""
         self.write_cmd(self.DISPLAY_ON)
         self.on = True
-        
+
     def write_cmd_i2c(self, command, *args):
         """Write command to display using I2C.
 
@@ -1053,4 +1054,3 @@ class Display(object):
         self.cs(0)
         self.spi.write(data)
         self.cs(1)
-    

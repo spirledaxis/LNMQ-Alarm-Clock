@@ -1,36 +1,39 @@
-#DFPlayer mp3 player Driver using UART for Raspberry Pi Pico.
-#modified to include a transistor pin, muting the speaker while idle
+# DFPlayer mp3 player Driver using UART for Raspberry Pi Pico.
+# modified to include a transistor pin, muting the speaker while idle
 from machine import UART, Pin
 from utime import sleep_ms, sleep
 
-#Constants
+# Constants
+
 
 class DFPlayer():
-    UART_BAUD_RATE=9600
-    UART_BITS=8
-    UART_PARITY=None
-    UART_STOP=1
-    
+    UART_BAUD_RATE = 9600
+    UART_BITS = 8
+    UART_PARITY = None
+    UART_STOP = 1
+
     START_BYTE = 0x7E
     VERSION_BYTE = 0xFF
     COMMAND_LENGTH = 0x06
     ACKNOWLEDGE = 0x01
     END_BYTE = 0xEF
-    COMMAND_LATENCY =   500
-
+    COMMAND_LATENCY = 500
 
     def __init__(self, uartInstance, txPin, rxPin, busyPin, transistorPin):
-        self.playerBusy=Pin(busyPin, Pin.IN, Pin.PULL_UP)
+        self.playerBusy = Pin(busyPin, Pin.IN, Pin.PULL_UP)
         self.transistorPin = Pin(transistorPin, Pin.OUT)
-        self.uart = UART(uartInstance, baudrate=self.UART_BAUD_RATE, tx=Pin(txPin), rx=Pin(rxPin), bits=self.UART_BITS, parity=self.UART_PARITY, stop=self.UART_STOP)
+        self.uart = UART(uartInstance, baudrate=self.UART_BAUD_RATE, tx=Pin(txPin), rx=Pin(
+            rxPin), bits=self.UART_BITS, parity=self.UART_PARITY, stop=self.UART_STOP)
 
     def split(self, num):
         return num >> 8, num & 0xFF
 
     def sendcmd(self, command, parameter1, parameter2):
-        checksum = -(self.VERSION_BYTE + self.COMMAND_LENGTH + command + self.ACKNOWLEDGE + parameter1 + parameter2)
+        checksum = -(self.VERSION_BYTE + self.COMMAND_LENGTH +
+                     command + self.ACKNOWLEDGE + parameter1 + parameter2)
         highByte, lowByte = self.split(checksum)
-        toSend = bytes([b & 0xFF for b in [self.START_BYTE, self.VERSION_BYTE, self.COMMAND_LENGTH, command, self.ACKNOWLEDGE,parameter1, parameter2, highByte, lowByte, self.END_BYTE]])
+        toSend = bytes([b & 0xFF for b in [self.START_BYTE, self.VERSION_BYTE, self.COMMAND_LENGTH,
+                                           command, self.ACKNOWLEDGE, parameter1, parameter2, highByte, lowByte, self.END_BYTE]])
 
         self.uart.write(toSend)
         sleep_ms(self.COMMAND_LATENCY)
@@ -39,8 +42,8 @@ class DFPlayer():
     def queryBusy(self):
         """nots playerbusy"""
         return not self.playerBusy.value()
-        
-    #Common DFPlayer control commands
+
+    # Common DFPlayer control commands
     def nextTrack(self):
         self.sendcmd(0x01, 0x00, 0x00)
 
@@ -54,35 +57,35 @@ class DFPlayer():
         self.sendcmd(0x05, 0x00, 0x00)
 
     def setVolume(self, volume):
-        #Volume can be between 0-30
+        # Volume can be between 0-30
         self.sendcmd(0x06, 0x00, volume)
 
     def setEQ(self, eq):
-        #eq can be o-5
-        #0=Normal
-        #1=Pop
-        #2=Rock
-        #3=Jazz
-        #4=Classic
-        #5=Base
+        # eq can be o-5
+        # 0=Normal
+        # 1=Pop
+        # 2=Rock
+        # 3=Jazz
+        # 4=Classic
+        # 5=Base
 
         self.sendcmd(0x07, 0x00, eq)
 
     def setPlaybackMode(self, mode):
-        #Mode can be 0-3
-        #0=Repeat
-        #1=Folder Repeat
-        #2=Single Repeat
-        #3=Random
+        # Mode can be 0-3
+        # 0=Repeat
+        # 1=Folder Repeat
+        # 2=Single Repeat
+        # 3=Random
         self.sendcmd(0x08, 0x00, mode)
 
     def setPlaybackSource(self, source):
-        #Source can be 0-4
-        #0=U
-        #1=TF
-        #2=AUX
-        #3=SLEEP
-        #4=FLASH
+        # Source can be 0-4
+        # 0=U
+        # 1=TF
+        # 2=AUX
+        # 3=SLEEP
+        # 4=FLASH
         self.sendcmd(0x09, 0x00, source)
 
     def standby(self):
@@ -106,30 +109,27 @@ class DFPlayer():
         """recommended that a delay follows before reading querybusy ~0.5s"""
         self.transistorPin.on()
         self.sendcmd(0x0F, folder, file)
-                 
+
     def playMP3(self, filenum):
         self.transistorPin.on()
         a = (filenum >> 8) & 0xff
         b = filenum & 0xff
-        return self.sendcmd(0x12, a, b)#a, b)
+        return self.sendcmd(0x12, a, b)  # a, b)
 
-    #control transistor and thus the speaker
+    # control transistor and thus the speaker
     def trans_off(self):
         self.transistorPin.off()
 
     def trans_on(self):
         self.transistorPin.on()
-    
+
     def trans_toggle(self):
         self.transistorPin.toggle()
 
     def cleanup(self):
         self.transistorPin.off()
         self.pause()
-        
-    #Query System Parameters
+
+    # Query System Parameters
     def init(self, params):
         self.sendcmd(0x3F, 0x00, params)
-
-
-

@@ -4,6 +4,8 @@ import time
 import asyncio
 from kasa import Discover, SmartPlug
 from creds import username, password
+
+
 async def toggle_lights():
     dev = await Discover.discover_single("192.168.1.74", username=username, password=password)
     await dev.update()
@@ -67,15 +69,15 @@ try:
             body = 'cleared cache'
             with open('motds_cache.json', 'w') as f:
                 f.write('[]')
-            
+
             response = (
-                    'HTTP/1.1 500 Internal Server Error\r\n'
-                    'Content-Type: text/plain\r\n'
-                    f'Content-Length: {len(body)}\r\n'
-                    'Connection: close\r\n'
-                    '\r\n'
-                    f'{body}'
-                )
+                'HTTP/1.1 500 Internal Server Error\r\n'
+                'Content-Type: text/plain\r\n'
+                f'Content-Length: {len(body)}\r\n'
+                'Connection: close\r\n'
+                '\r\n'
+                f'{body}'
+            )
 
             cl.sendall(response.encode())
             time.sleep(0.1)
@@ -86,13 +88,13 @@ try:
                 body = f.read()
 
             response = (
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: application/json\r\n"
-            f"Content-Length: {len(body)}\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            f"{body}"
-        )
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                f"Content-Length: {len(body)}\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                f"{body}"
+            )
             cl.sendall(response.encode())
             time.sleep(0.1)
             cl.close()

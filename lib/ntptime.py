@@ -1,13 +1,14 @@
 import time
 import socket
 import struct
-import machine #type: ignore
+import machine  # type: ignore
 
 # The NTP host can be configured at runtime by doing: ntptime.host = 'myhost.org'
 host = "time.windows.com"
 # The NTP socket timeout can be configured at runtime by doing: ntptime.timeout = 2
 
 timeout = 1
+
 
 def get_time():
     NTP_QUERY = bytearray(48)
@@ -65,10 +66,12 @@ def second_sunday_in_march(year):
     days_to_second_sunday = (6 - weekday + 7) % 7 + 7
     return 1 + days_to_second_sunday
 
+
 def first_sunday_in_november(year):
     weekday = time.gmtime(time.mktime((year, 11, 1, 0, 0, 0, 0, 0)))[6]
     days_to_first_sunday = (6 - weekday) % 7
     return 1 + days_to_first_sunday
+
 
 def is_dst_pacific(t):
     """Detect if DST is active for Pacific Time using UTC time tuple."""
@@ -84,6 +87,7 @@ def is_dst_pacific(t):
     dst_end_utc = time.mktime((year, 11, dst_end_day, 9, 0, 0, 0, 0))
 
     return dst_start_utc <= utc_sec < dst_end_utc
+
 
 def settime():
     t = get_time()  # UTC time in seconds
@@ -101,15 +105,14 @@ def settime():
 
     # Set RTC (year, month, mday, weekday, hour, minute, second, subsecond)
     rtc_tuple = (
-    local_tm[0],  # year
-    local_tm[1],  # month
-    local_tm[2],  # day
-    local_tm[6],  # weekday (0=Mon)
-    local_tm[3],  # hour
-    local_tm[4],  # minute
-    local_tm[5],  # second
-    0             # subseconds (usually 0)
-)
-    
-    machine.RTC().datetime(rtc_tuple)
+        local_tm[0],  # year
+        local_tm[1],  # month
+        local_tm[2],  # day
+        local_tm[6],  # weekday (0=Mon)
+        local_tm[3],  # hour
+        local_tm[4],  # minute
+        local_tm[5],  # second
+        0             # subseconds (usually 0)
+    )
 
+    machine.RTC().datetime(rtc_tuple)
