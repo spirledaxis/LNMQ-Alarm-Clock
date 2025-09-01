@@ -1,11 +1,7 @@
-from utime import sleep
 import time
 import socket
 import struct
 import machine #type: ignore
-import json
-import network #type: ignore
-import wificreds
 
 # The NTP host can be configured at runtime by doing: ntptime.host = 'myhost.org'
 host = "time.windows.com"
