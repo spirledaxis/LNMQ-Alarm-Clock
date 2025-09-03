@@ -80,7 +80,7 @@ def web_server(s, clients):
                     cl.send(b'HTTP/1.0 200 OK\r\n\r\nMotd Recieved')
                     cl.close()
                     clients.remove(cl)
-                    return newdata
+                    return ('motd', newdata)
 
                 if 'GET /motds.json' in request:
                     with open('motds.json', 'r') as f:
@@ -112,6 +112,7 @@ def web_server(s, clients):
                         cl.send(b'HTTP/1.0 200 OK\r\n\r\nMotd Recieved')
                         cl.close()
                         clients.remove(cl)
+                        return ('alarm_msg', alarm_msg)
                 else:
                     cl.send(b'HTTP/1.0 200 OK\r\n\r\nDeault response')
                     cl.close()

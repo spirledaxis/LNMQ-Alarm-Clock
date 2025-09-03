@@ -1,9 +1,11 @@
+import random
 from machine import RTC  # type: ignore
 import socket
 import mode
 import lib.connect as connect
 from lib.ntptime import settime
 from lib.neotimer import Neotimer
+import motd_parser
 import webserver
 from components import Alarm, Switch, Motor
 import config
@@ -123,21 +125,30 @@ try:
         new_id += 1
         motds.append(motd)
     with open('motds.json', 'w') as f:
-        motds = json.dump(motds, f)
+        json.dump(motds, f)
 
     http_get(config.server_ip, config.server_port, "/clear_cache")
 
-    alarm_msg = http_get(config.server_ip, config.server_port, "/fetch_alarm_msg")
-    print(alarm_msg)
-    if alarm_msg != '' and alarm_msg != '404 Not Found':
+    new_alarm_msg = http_get(config.server_ip, config.server_port, "/fetch_alarm_msg")
+    print(new_alarm_msg)
+    if new_alarm_msg != '' and new_alarm_msg != '404 Not Found':
         print("got new alarm message")
         with open(f'alarms.json', 'r') as f:
             data = json.load(f)[0]
-        data['alarm_message'] = alarm_msg
+        data['alarm_message'] = new_alarm_msg
         
         with open(f'alarms.json', 'r') as f:
             json.dump(data, f)
 
+    if new_alarm_msg == 'random':
+        with open('alarms.json', 'r') as f:
+            data = json.load(f)[0]
+
+        data['alarm_message'] = motd_parser.select_random_motd(motds)['motd']   
+    
+        with open('alarms.json', 'w') as f:
+            json.dump([data], f)
+    
     s, clients = webserver.web_setup()
     rtc = RTC()
 
@@ -165,10 +176,21 @@ try:
         now = rtc.datetime()
 
         # webserver
-        new_motd = webserver.web_server(s, clients)
-        if new_motd is not None:
-            home.new_motds.append(new_motd)
+        check = webserver.web_server(s, clients)
+        if check is not None:
+            print("asifhjaf9iuohea")
+            print(check)
+            if check[0] == 'motd':
+                home.new_motds.append(check[1])
+            elif check[0] == 'alarm_msg' and check[1] == 'random':
+                with open('alarms.json', 'r') as f:
+                    data = json.load(f)[0]
 
+                data['alarm_message'] = motd_parser.select_random_motd(motds)['motd']   
+            
+                with open('alarms.json', 'w') as f:
+                    json.dump([data], f)
+            
         # handle alarm
         myalarm.update(now, home)
 

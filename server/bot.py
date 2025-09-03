@@ -217,8 +217,9 @@ async def set_alarm_message(ctx: SlashContext, message):
             await ctx.send(embed=embed)
             print("good 2")
     else:
+        #TODO: let the user know that 'random' means selecting a random MOTD instead of actually displaying 'random'
         embed = interactions.Embed(
-            title="Alarm ,essage sent!",
+            title="Alarm message sent!",
             description="Sent alarm message successfully!",
             color=BrandColors.GREEN
         )
