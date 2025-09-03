@@ -129,14 +129,15 @@ try:
 
     http_get(config.server_ip, config.server_port, "/clear_cache")
 
-    new_alarm_msg = http_get(config.server_ip, config.server_port, "/fetch_alarm_msg")
+    new_alarm_msg = http_get(
+        config.server_ip, config.server_port, "/fetch_alarm_msg")
     print(new_alarm_msg)
     if new_alarm_msg != '' and new_alarm_msg != '404 Not Found':
         print("got new alarm message")
         with open(f'alarms.json', 'r') as f:
             data = json.load(f)[0]
         data['alarm_message'] = new_alarm_msg
-        
+
         with open(f'alarms.json', 'r') as f:
             json.dump(data, f)
 
@@ -144,11 +145,11 @@ try:
         with open('alarms.json', 'r') as f:
             data = json.load(f)[0]
 
-        data['alarm_message'] = motd_parser.select_random_motd(motds)['motd']   
-    
+        data['alarm_message'] = motd_parser.select_random_motd(motds)['motd']
+
         with open('alarms.json', 'w') as f:
             json.dump([data], f)
-    
+
     s, clients = webserver.web_setup()
     rtc = RTC()
 
@@ -186,11 +187,12 @@ try:
                 with open('alarms.json', 'r') as f:
                     data = json.load(f)[0]
 
-                data['alarm_message'] = motd_parser.select_random_motd(motds)['motd']   
-            
+                data['alarm_message'] = motd_parser.select_random_motd(motds)[
+                    'motd']
+
                 with open('alarms.json', 'w') as f:
                     json.dump([data], f)
-            
+
         # handle alarm
         myalarm.update(now, home)
 
@@ -300,4 +302,3 @@ finally:
     display.cleanup()
     config.motor.stop()
     print("cleanup success!")
-

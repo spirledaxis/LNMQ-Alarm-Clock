@@ -133,7 +133,8 @@ async def send_message(ctx: SlashContext, message: str, show_name=True):
         )
         await ctx.send(embed=embed)
 
-@slash_command(name='alarm_message', 
+
+@slash_command(name='alarm_message',
                description="Set the message displayed when the alarm goes off.",
                scopes=servers)
 @slash_option(name='message', description='', opt_type=OptionType.STRING, required=True)
@@ -193,7 +194,7 @@ async def set_alarm_message(ctx: SlashContext, message):
         try:
             with open('alarm_message_cache.txt', 'w') as f:
                 f.write(message)
-           
+
         except Exception as e:
             print(e)
             print("Bad")
@@ -217,7 +218,7 @@ async def set_alarm_message(ctx: SlashContext, message):
             await ctx.send(embed=embed)
             print("good 2")
     else:
-        #TODO: let the user know that 'random' means selecting a random MOTD instead of actually displaying 'random'
+        # TODO: let the user know that 'random' means selecting a random MOTD instead of actually displaying 'random'
         embed = interactions.Embed(
             title="Alarm message sent!",
             description="Sent alarm message successfully!",

@@ -101,7 +101,7 @@ try:
         elif 'GET /clear_alarm_msg' in request:
             with open('alarm_message_cache.txt', 'w') as f:
                 f.write('')
-                
+
         elif 'GET /fetch_alarm_msg' in request:
             with open('alarm_message_cache.txt', 'r') as f:
                 body = f.read()

@@ -17,6 +17,8 @@ timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
 
 prev_dur = 0
+
+
 class DisplayManager:
     def __init__(self):
         self.display_states: list[DisplayState] = None
@@ -45,7 +47,7 @@ class DisplayManager:
         self.display_timer.start()
 
     def run_current_state(self):
-       
+
         self.display.fill_rectangle(
             0, 0, self.display.width, self.display.height, True)
 
@@ -55,8 +57,8 @@ class DisplayManager:
         #print(ticks_diff(after, before), "gng")
         #self.display.draw_vline(self.display.width//2, 0, self.display.height-1)
         self.display.present()
-        #print(self.display_timer.get_remaining())
-        
+        # print(self.display_timer.get_remaining())
+
         if self.display_timer.finished():
             print("display timer expired")
             self.set_active_state("display_off")
@@ -115,7 +117,6 @@ class Home(DisplayState):
         self.size = 15
         self.time_len = 0
 
-        
         def make_icon(data):
             return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
 
@@ -178,28 +179,28 @@ class Home(DisplayState):
 
         self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
                                self.motd, bally, rotate=180)
-    
+
     def bounce_motd(self):
         motd_len = bally.measure_text(self.motd)
         if motd_len <= self.display.width:
             self.motd_pos = self.display.width // 2 + motd_len // 2
-        
+
         elif motd_len > self.display.width:
             if self.motd_pos - motd_len > 0:
-                #we saw the entire message going to the left
+                # we saw the entire message going to the left
                 self.motd_dir = 'r'
             elif self.motd_pos < 128:
-                #we saw the entire message going to the right
+                # we saw the entire message going to the right
                 self.motd_dir = 'l'
-            
+
             if self.motd_dir == 'r':
                 self.motd_pos -= 1
             elif self.motd_dir == 'l':
                 self.motd_pos += 1
 
         self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
-                        self.motd, bally, rotate=180)
-        
+                               self.motd, bally, rotate=180)
+
     def draw_icons(self):
         if self.display_manager.switch.get_state():
             self.display.draw_sprite(self.bell_icon_fb, x=(
@@ -337,7 +338,7 @@ class Home(DisplayState):
         self.display_manager.activate_state("set_alarm")
 
     def toggle_display(self):
-        #TODO: switch this to move to display off state
+        # TODO: switch this to move to display off state
         if not self.display.on:
             self.display.wake()
         else:
@@ -402,7 +403,7 @@ class Home(DisplayState):
         self.draw_cube()
         self.clock()
         self.draw_icons()
-        
+
         if self.motd_mode == 'scroll':
             self.scroll_motd()
         elif self.motd_mode == 'bounce':
