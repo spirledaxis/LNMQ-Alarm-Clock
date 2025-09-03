@@ -2,11 +2,11 @@ i_am_speed = [
     ('w', 400, 100),
     ('r', 1133, 30),  # exhale
     ('l', 733, 40),  # exhale 2
-    ('w', 6300, 100),
+    ('w', 6000, 100),
     ('r', 2184, 100),  # racing sounds
     ('l', 1133, 80),  # one winner
     ('r', 1183, 80),  # 42 losers
-    ('w', 2634, 100),  # I eat losers for breakfeast
+    ('w', 2234, 100),  # I eat losers for breakfeast
     ('r', 2633, 100),  # racing sounds
     ('w', 813, 100),  # "speed"
     ('r', 2500, 100),  # racing sounds
