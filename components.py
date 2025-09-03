@@ -113,7 +113,7 @@ class Alarm:
         else:
             self.motor.set_movement(custom_movement)
 
-    def update(self, now, display, display_timer):
+    def update(self, now, home):
         """
         Args:
             now: a rtc tuple"""
@@ -128,7 +128,7 @@ class Alarm:
         now_minute = now[5]
         #print(self.hour, self.minute, self.locked, self.enabled)
         if now_hour == self.hour and now_minute == self.minute and not self.locked and self.enabled:
-            self.fire(display, display_timer)
+            self.fire(home)
             print("firing")
 
         elif now_hour != self.hour and now_minute != self.minute and self.locked:
@@ -147,15 +147,20 @@ class Alarm:
                 self.motor.start()
             self.motor.do_movement()
 
-    def fire(self, display, display_timer):
+    def fire(self, home):
         if self.locked:
             return
+
+        with open('alarms.json', 'r') as f:
+            alarm_message = json.load(f)[0]['alarm_message']
 
         print("alarm should go off now")
         self.locked = True
         self.is_active = True
-        display_timer.restart()
-        display.wake()
+        home.display_manager.display_timer.restart()
+        home.display_manager.set_active_state("home")
+        home.motd_mode = "bounce"
+        home.motd = alarm_message
         self.speaker.playTrack(1, self.ringtone)
         # self.motor.set_movement(self.motor_movement)
         self.timeout_timer.start()

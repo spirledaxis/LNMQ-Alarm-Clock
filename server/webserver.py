@@ -98,6 +98,25 @@ try:
             cl.sendall(response.encode())
             time.sleep(0.1)
             cl.close()
+        elif 'GET /clear_alarm_msg' in request:
+            with open('alarm_message_cache.txt', 'w') as f:
+                f.write('')
+                
+        elif 'GET /fetch_alarm_msg' in request:
+            with open('alarm_message_cache.txt', 'r') as f:
+                body = f.read()
+
+            response = (
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                f"Content-Length: {len(body)}\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                f"{body}"
+            )
+            cl.sendall(response.encode())
+            time.sleep(0.1)
+            cl.close()
 
         else:
             # For other requests, respond 404 and close

@@ -3,7 +3,7 @@ from components import Button, Switch
 import config
 from lib import timeutils
 from lib.xglcd_font import XglcdFont
-from motds import motd_parser
+import motd_parser
 import socket
 import json
 import framebuf  # type: ignore
@@ -12,10 +12,11 @@ import network  # type: ignore
 from lib.neotimer import Neotimer
 import random
 import math
+from utime import ticks_ms, ticks_diff
 timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
 
-
+prev_dur = 0
 class DisplayManager:
     def __init__(self):
         self.display_states: list[DisplayState] = None
@@ -24,7 +25,7 @@ class DisplayManager:
         self.display_timer.start()
         self.switch = Switch(config.switch)
 
-    def activate_state(self, name):
+    def set_active_state(self, name):
         # TODO: Timer resets itself every time it expries
         print("called activiate state")
         for display_state in self.display_states:
@@ -44,15 +45,21 @@ class DisplayManager:
         self.display_timer.start()
 
     def run_current_state(self):
+       
         self.display.fill_rectangle(
             0, 0, self.display.width, self.display.height, True)
-        self.current_state_obj.main()
-        self.display.present()
-        print(self.display_timer.get_remaining())
-        if self.display_timer.finished():
 
+        before = ticks_ms()
+        self.current_state_obj.main()
+        after = ticks_ms()
+        #print(ticks_diff(after, before), "gng")
+        #self.display.draw_vline(self.display.width//2, 0, self.display.height-1)
+        self.display.present()
+        #print(self.display_timer.get_remaining())
+        
+        if self.display_timer.finished():
             print("display timer expired")
-            self.activate_state("display_off")
+            self.set_active_state("display_off")
 
         for button in self.current_state_obj.button_map:
             button.update()
@@ -85,7 +92,10 @@ class Home(DisplayState):
 
         self.display_manager = display_manager
         self.motd_pos = 0
+        self.motd_dir = 'l'
         self.motd = 'hello world'
+        self.motd_mode = 'scroll'
+
         with open('motds.json', 'r') as f:
             motds_data = json.load(f)
         self.motds_data = motds_data
@@ -105,6 +115,7 @@ class Home(DisplayState):
         self.size = 15
         self.time_len = 0
 
+        
         def make_icon(data):
             return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
 
@@ -167,7 +178,28 @@ class Home(DisplayState):
 
         self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
                                self.motd, bally, rotate=180)
+    
+    def bounce_motd(self):
+        motd_len = bally.measure_text(self.motd)
+        if motd_len <= self.display.width:
+            self.motd_pos = self.display.width // 2 + motd_len // 2
+        
+        elif motd_len > self.display.width:
+            if self.motd_pos - motd_len > 0:
+                #we saw the entire message going to the left
+                self.motd_dir = 'r'
+            elif self.motd_pos < 128:
+                #we saw the entire message going to the right
+                self.motd_dir = 'l'
+            
+            if self.motd_dir == 'r':
+                self.motd_pos -= 1
+            elif self.motd_dir == 'l':
+                self.motd_pos += 1
 
+        self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
+                        self.motd, bally, rotate=180)
+        
     def draw_icons(self):
         if self.display_manager.switch.get_state():
             self.display.draw_sprite(self.bell_icon_fb, x=(
@@ -305,6 +337,7 @@ class Home(DisplayState):
         self.display_manager.activate_state("set_alarm")
 
     def toggle_display(self):
+        #TODO: switch this to move to display off state
         if not self.display.on:
             self.display.wake()
         else:
@@ -346,6 +379,9 @@ class Home(DisplayState):
     def on_snze(self):
         if self.alarm.is_active:
             self.alarm.stop()
+            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+            self.motd_mode = 'scroll'
+
         else:
             # TODO: switch to urequests
             print("turning off light")
@@ -363,10 +399,14 @@ class Home(DisplayState):
         self.display_manager.activate_state("message_reader")
 
     def main(self):
-        self.clock()
         self.draw_cube()
-        self.scroll_motd()
+        self.clock()
         self.draw_icons()
+        
+        if self.motd_mode == 'scroll':
+            self.scroll_motd()
+        elif self.motd_mode == 'bounce':
+            self.bounce_motd()
 
 
 class SetAlarm(DisplayState):
@@ -446,11 +486,14 @@ class SetAlarm(DisplayState):
                 self.ampm = 'am'
 
     def on_exit(self):
+        with open('alamrs.json', 'r') as f:
+            alarm_msg = json.load(f)['alarm_message']
         data = [{
             "hour": self.hour,
             "minute": self.minute,
             "ampm": self.ampm,
-            "ringtone": self.ringtone_index
+            "ringtone": self.ringtone_index,
+            "alarm_messge": alarm_msg
         }]
         with open('alarms.json', 'w') as f:
             json.dump(data, f)
@@ -732,7 +775,7 @@ if __name__ == '__main__':
     off = DisplayOff(display_manager, 'display_off')
     messenger = MessageViewer(display_manager, 'message_reader', home)
     display_manager.display_states = [home, alarm, off, messenger]
-    display_manager.activate_state("home")
+    display_manager.set_active_state("home")
     print("running mode")
     prev_dur = 0
     while True:

@@ -4,7 +4,7 @@ import mode
 import lib.connect as connect
 from lib.ntptime import settime
 from lib.neotimer import Neotimer
-from motds import motd_reciever
+import webserver
 from components import Alarm, Switch, Motor
 import config
 import json
@@ -107,6 +107,8 @@ def http_get(host, port, path):
 
 
 try:
+    with open(f'alarms.json', 'r') as f:
+        print(f.read())
     connect.do_connect()
 
     with open('motds.json', 'r') as f:
@@ -125,7 +127,18 @@ try:
 
     http_get(config.server_ip, config.server_port, "/clear_cache")
 
-    s, clients = motd_reciever.web_setup()
+    alarm_msg = http_get(config.server_ip, config.server_port, "/fetch_alarm_msg")
+    print(alarm_msg)
+    if alarm_msg != '' and alarm_msg != '404 Not Found':
+        print("got new alarm message")
+        with open(f'alarms.json', 'r') as f:
+            data = json.load(f)[0]
+        data['alarm_message'] = alarm_msg
+        
+        with open(f'alarms.json', 'r') as f:
+            json.dump(data, f)
+
+    s, clients = webserver.web_setup()
     rtc = RTC()
 
     settime()
@@ -141,7 +154,7 @@ try:
     message_reader = mode.MessageViewer(
         display_manager, home, 'message_reader')
     display_manager.display_states = [home, alarm, off, message_reader]
-    display_manager.activate_state("home")
+    display_manager.set_active_state("home")
 
     prev_dur = 0
     lock_ntptime = False
@@ -152,13 +165,12 @@ try:
         now = rtc.datetime()
 
         # webserver
-        new_motd = motd_reciever.web_server(s, clients)
+        new_motd = webserver.web_server(s, clients)
         if new_motd is not None:
             home.new_motds.append(new_motd)
 
         # handle alarm
-        myalarm.update(now, display_manager.display,
-                       display_manager.display_timer)
+        myalarm.update(now, home)
 
         # debug stuff
         dur = display_manager.display_timer.get_elapsed()
@@ -181,6 +193,9 @@ try:
         switch.update()
 
 except Exception as e:
+    config.speaker.cleanup()
+    display.cleanup()
+    config.motor.stop()
     import sys
     sys.print_exception(e)
     print("there was an error")
