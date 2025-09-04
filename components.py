@@ -5,6 +5,13 @@ import json
 from lib import timeutils
 from movements import *
 
+def set_movement_by_ringtone(ringtone, motor):
+    if ringtone == 13:
+        motor.set_movement(freedom_dive)
+    elif ringtone == 8:
+        motor.set_movement(i_am_speed)
+    else:
+        motor.set_movement(custom_movement)
 
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
@@ -88,6 +95,7 @@ class Alarm:
     def __init__(self, timeout_s, motor, speaker, switch):
         """use military time for the hour. """
         with open('alarms.json', 'r') as f:
+            #print(f.read())
             alarm = json.load(f)
             alarm = alarm[0]
             alarm_hour = int(alarm['hour'])
@@ -103,15 +111,10 @@ class Alarm:
         self.locked = False  # used so alarm logic doesn't go off for the entire minute
         self.motor = motor
         self.speaker = speaker
-        self.set_movement_by_ringtone()
+        self.original_ringtone = self.ringtone
+        set_movement_by_ringtone(self.ringtone, self.motor)
 
-    def set_movement_by_ringtone(self):
-        if self.ringtone == 13:
-            self.motor.set_movement(freedom_dive)
-        elif self.ringtone == 8:
-            self.motor.set_movement(i_am_speed)
-        else:
-            self.motor.set_movement(custom_movement)
+
 
     def update(self, now, home):
         """
@@ -128,7 +131,7 @@ class Alarm:
         now_minute = now[5]
         #print(self.hour, self.minute, self.locked, self.enabled)
         if now_hour == self.hour and now_minute == self.minute and not self.locked and self.enabled:
-            self.fire(home)
+            self.fire(now, home)
             print("firing")
 
         elif now_hour != self.hour and now_minute != self.minute and self.locked:
@@ -147,12 +150,19 @@ class Alarm:
                 self.motor.start()
             self.motor.do_movement()
 
-    def fire(self, home):
+    def fire(self, now, home):
         if self.locked:
             return
 
+
+        if now[2] == 1:
+            self.original_ringtone = self.ringtone
+            self.ringtone = 16 #first of the month ringtone
+
         with open('alarms.json', 'r') as f:
             alarm_message = json.load(f)[0]['alarm_message']
+        with open('ringtones.json', 'r') as f:
+            volume = json.load(f)[self.ringtone-1]['volume']
 
         print("alarm should go off now")
         self.locked = True
@@ -161,6 +171,7 @@ class Alarm:
         home.display_manager.set_active_state("home")
         home.motd_mode = "bounce"
         home.motd = alarm_message
+        self.speaker.setVolume(volume)
         self.speaker.playTrack(1, self.ringtone)
         # self.motor.set_movement(self.motor_movement)
         self.timeout_timer.start()
@@ -174,7 +185,7 @@ class Alarm:
         self.motor.stop()
         self.timeout_timer.reset()
         self.is_active = False
-
+        self.ringtone = self.original_ringtone
 
 class Button:
     def __init__(self, pin, callback, debounce_ms=100):

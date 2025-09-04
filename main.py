@@ -82,8 +82,6 @@ display.present()
 
 
 # TODO: switch to urequests
-# add reading from cache here
-
 
 def http_get(host, port, path):
     addr = socket.getaddrinfo(host, port)[0][-1]
@@ -135,12 +133,14 @@ try:
     if new_alarm_msg != '' and new_alarm_msg != '404 Not Found':
         print("got new alarm message")
         with open(f'alarms.json', 'r') as f:
+            #print(f.read())
             data = json.load(f)[0]
         data['alarm_message'] = new_alarm_msg
 
-        with open(f'alarms.json', 'r') as f:
-            json.dump(data, f)
+        with open(f'alarms.json', 'w') as f:
+            json.dump([data], f)
 
+        http_get(config.server_ip, config.server_port, "/clear_alarm_msg")
     if new_alarm_msg == 'random':
         with open('alarms.json', 'r') as f:
             data = json.load(f)[0]
@@ -156,9 +156,10 @@ try:
     settime()
 
     switch = Switch(config.switch)
+
     myalarm = Alarm(config.alarm_timeout_min * 60,
                     config.motor, config.speaker, switch)
-
+    
     display_manager = mode.DisplayManager()
     home = mode.Home(display_manager, myalarm, 'home')
     alarm = mode.SetAlarm(display_manager, myalarm, 'set_alarm')
@@ -171,7 +172,8 @@ try:
     prev_dur = 0
     lock_ntptime = False
     config.display.set_contrast(0)
-
+    now = rtc.datetime()
+    myalarm.fire(now, home)
     while True:
         display_manager.run_current_state()
         now = rtc.datetime()
@@ -218,7 +220,6 @@ try:
 
 except Exception as e:
     config.speaker.cleanup()
-    display.cleanup()
     config.motor.stop()
     import sys
     sys.print_exception(e)
