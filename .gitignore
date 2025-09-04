@@ -5,7 +5,6 @@ __pycache__
 pico_sdk_import.cmake
 CMakeLists.txt
 testspace.py
-blink.py
 .gitignore
 wificreds.py
 *test*
