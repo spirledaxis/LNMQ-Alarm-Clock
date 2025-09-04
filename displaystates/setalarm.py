@@ -14,9 +14,8 @@ class SetAlarm(DisplayState):
             Button(config.snze_l, self.preview)
         ]
         super().__init__(self.button_map, name, display_manager)
-        with open('alarms.json', 'r') as f:
+        with open('alarm.json', 'r') as f:
             alarm_json = json.load(f)
-            alarm_json = alarm_json[0]
             self.hour = int(alarm_json['hour'])
             self.minute = int(alarm_json['minute'])
             self.ampm = alarm_json['ampm']
@@ -119,8 +118,8 @@ class SetAlarm(DisplayState):
 
 
     def on_exit(self):
-        with open('alarms.json', 'r') as f:
-            alarm_msg = json.load(f)[0]['alarm_message']
+        with open('alarm.json', 'r') as f:
+            alarm_msg = json.load(f)['alarm_message']
        
         data = [{
             "hour": self.hour,
@@ -139,7 +138,7 @@ class SetAlarm(DisplayState):
         with open('ringtones.json', 'w') as f:
             json.dump(self.ringtone_json, f)
 
-        with open('alarms.json', 'w') as f:
+        with open('alarm.json', 'w') as f:
             json.dump(data, f)
 
         self.alarm.hour = timeutils.to_military_time(self.hour, self.ampm)

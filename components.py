@@ -94,10 +94,9 @@ class Motor:
 class Alarm:
     def __init__(self, timeout_s, motor, speaker, switch):
         """use military time for the hour. """
-        with open('alarms.json', 'r') as f:
+        with open('alarm.json', 'r') as f:
             #print(f.read())
             alarm = json.load(f)
-            alarm = alarm[0]
             alarm_hour = int(alarm['hour'])
             alarm_ampm = alarm['ampm']
             self.minute = int(alarm['minute'])
@@ -159,8 +158,8 @@ class Alarm:
             self.original_ringtone = self.ringtone
             self.ringtone = 16 #first of the month ringtone
 
-        with open('alarms.json', 'r') as f:
-            alarm_message = json.load(f)[0]['alarm_message']
+        with open('alarm.json', 'r') as f:
+            alarm_message = json.load(f)['alarm_message']
         with open('ringtones.json', 'r') as f:
             volume = json.load(f)[self.ringtone-1]['volume']
 

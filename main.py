@@ -110,7 +110,7 @@ def http_get(host, port, path):
 
 
 try:
-    with open(f'alarms.json', 'r') as f:
+    with open(f'alarm.json', 'r') as f:
         print(f.read())
     connect.do_connect()
 
@@ -140,22 +140,22 @@ try:
         print(new_alarm_msg)
         if new_alarm_msg != '' and new_alarm_msg != '404 Not Found':
             print("got new alarm message")
-            with open(f'alarms.json', 'r') as f:
+            with open(f'alarm.json', 'r') as f:
                 #print(f.read())
-                data = json.load(f)[0]
+                data = json.load(f)
             data['alarm_message'] = new_alarm_msg
 
-            with open(f'alarms.json', 'w') as f:
+            with open(f'alarm.json', 'w') as f:
                 json.dump([data], f)
 
             http_get(config.server_ip, config.server_port, "/clear_alarm_msg")
         if new_alarm_msg == 'random':
-            with open('alarms.json', 'r') as f:
-                data = json.load(f)[0]
+            with open('alarm.json', 'r') as f:
+                data = json.load(f)
 
             data['alarm_message'] = motd_parser.select_random_motd(motds)['motd']
 
-            with open('alarms.json', 'w') as f:
+            with open('alarm.json', 'w') as f:
                 json.dump([data], f)
     except OSError as e:
         if e.errno == errno.ETIMEDOUT:
@@ -199,13 +199,13 @@ try:
             if check[0] == 'motd':
                 home.new_motds.append(check[1])
             elif check[0] == 'alarm_msg' and check[1] == 'random':
-                with open('alarms.json', 'r') as f:
-                    data = json.load(f)[0]
+                with open('alarm.json', 'r') as f:
+                    data = json.load(f)
 
                 data['alarm_message'] = motd_parser.select_random_motd(motds)[
                     'motd']
 
-                with open('alarms.json', 'w') as f:
+                with open('alarm.json', 'w') as f:
                     json.dump([data], f)
 
         # handle alarm
