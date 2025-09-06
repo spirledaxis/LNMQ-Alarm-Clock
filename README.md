@@ -1,7 +1,7 @@
 # Intro and motivation
 
-This projected modified an alarm clock (which is Lightning McQueen themed), giving it a large oled display and Wi-Fi. The initial motivation for this project was to get myself into the world of microcontrollers and circuits, along with adding NTP time as this clock is quite old, and its timekeeping started to drift noticeably. Furthermore, this alarm clock is quite interesting, and I wanted to give it a new life with modern upgrades.
-
+This projected modified this alarm clock, giving it a large oled display and Wi-Fi. The initial motivation for this project was to get myself into the world of microcontrollers and circuits, along with adding NTP time as this clock is quite old, and its timekeeping started to drift noticeably. Furthermore, this alarm clock is quite interesting, and I wanted to give it a new life with modern upgrades.
+![screenshot](images/IMG_9452.jpg)
 # The alarm clock
 
 In late March, I decided to open up the alarm clock to see what I was working with. The design had a pcb right behind the display and buttons. It connected to components like the motor with some wires. It had the following features:
@@ -14,11 +14,12 @@ In late March, I decided to open up the alarm clock to see what I was working wi
 -   Several power methods (Barrel jack, coin battery, 4xAA)
 -   Speaker
 
-The alarm clock appeared to have a ton of space on the inside, but there are ‘pillars’ that connect the bottom of the alarm clock to the body. Also, the motor took up a lot of space.
 
-# Parts/Construction
+![screenshot](images/IMG_BF69C4BD-1878-4D7B-ABF2-43915751D9B3.jpg)
 
-I never considered using their display because I have no knowledge of it, and it has many pins (so I’d need many wires). Instead, I opted for an SPI oled display. For the speaker, I drove it with a DFplayer, and I used an L9110H IC for the motor.
+
+The alarm clock appeared to have a ton of space on the inside, but there are ‘pillars’ that connect the bottom of the alarm clock to the body. Also, the motor took up a lot of space. I didn't take a picture with all the orginal componets, so drew them on. You can see where the PCB, motor, and speaker sit. Power methods sat on the bottom plate, which is not shown.
+![screenshot](images/IMG_9013.JPEG)
 
 ### Parts list with Justifications:
 
@@ -54,22 +55,26 @@ I never considered using their display because I have no knowledge of it, and it
 -   Total: \$84
 -   Total by pc. : \$64.70
 
-### Printing
+### 3d Printing
 
-I was very against 3d printing stuff for this project. I don’t have much experience with 3d modeling, and I didn’t want to do multiple iterations in case I measured wrong and the part doesn’t fit.
-
+I was very against 3d printing stuff for this project. I don’t have much experience with 3d modeling, and I didn’t want to do multiple iterations in case I measured wrong and the part doesn’t fit. 
 ### General Construction
 
 The original PCB was used to keep buttons and switches in place. I ran wires from the buttons/switch to the pico.
 
 The display sits left of the original display, and is mounted far away from the clock body to allow McQueen to move around. 3 nuts are used on each screw: one right behind the display (to hold it in place), and 2 on either side of the clock body. Using two screws allowed me to adjust how far out the display sits from the clock body.
 
-The Pico, DFplayer, and H-bridge are soldered to the breadboard with female socket headers (H-bridge was directly soldered though), and the breadboard sits behind the motor, and is secured via the top and bottom of the clock body, along with the motor.
+The Pico and DFplayerare soldered to the breadboard with female socket headers (H-bridge was directly soldered), and the breadboard sits behind the motor, and is secured via the top and bottom of the clock body, as well as the motor.
 
-The Powerboost and Li-ion battery are glued to the bottom plate. The 9V battery sits inside the clock but is not secured by anything. It is near the motor and the display.
+I added an NPN transistor between the DFplayer and the speaker, as I noticed some feedback noise when the speaker was idle.
 
-The usb cable comes out of what used to be the barrel jack hole. I modified the hole to stay continuous until the bottom, to have enough room for the cable. This cable is used for power and programming.
+The Powerboost and Li-ion battery are glued to the bottom plate. The 9V battery sits inside the clock but is not secured by anything. 
 
+The usb cable (not shown) comes out of what used to be the barrel jack hole. I modified the hole to stay continuous until the bottom, to have enough room for the cable. This cable is used for power and programming.
+
+I couldn't get the sd extension to work with the dfplayer, so the final product omitted it. I also decided to glue the Powerboost directly to the bottom plate, rather than mount it on some breadboard.
+![screenshot](images/IMG_9304.JPEG)
+![screenshot](images/IMG_9301.JPEG)
 # Features
 
 -   NTP time with automatic daylights savings adjustment
@@ -83,27 +88,27 @@ The usb cable comes out of what used to be the barrel jack hole. I modified the 
 -   Icons representing status (wifi, alarm, new message, on battery/power)
 
 # Compromises
-
+These are things I wanted to add, but I couldn't for some reason.
 -   Headlights for McQueen via leds: I stripped the screw and could not continue without cutting plastic.
 -   Custom PCB: Too many measurements and unknowns (such as hole radius for the screws) to create an accurate PCB that would fit in the footprint of the clock. I also wasn’t sure if all the components (pico, h bridge, dfplayer) would fit into the clock if I mount it where the original pcb was.
--   Sound effects buttons (the smaller top buttons) are linked, which gives a signal from both if one is pressed. I’d have to break a trace, then check if that stopped the linking. I have no idea which trace does that.
+-   Sound effects buttons (the smaller top buttons on the left and right) are linked, which gives a signal from both if one is pressed. I’d have to break a trace, then check if that stopped the linking. I have no idea which trace does that.
 -   No original sound effects: caused by poor planning, I didn’t record the clock’s factory sound effects before adding my modifications.
 -   Hard to repair design: mitigated by female pin headers on the board, but many things are directly soldered to each other.
 -   Can’t easily add ringtones: I need to open the clock to access the sd card and add more ringtones. Sd extender didn’t work, and mounting DFplayer and cutting a slit was too much work (adding extra wires, 3d prints, and plastic cutting)
 
 # Wiring:
 
-See the fritzing sketch. The battery is actually 1200mAh, not 110. Buttons and switches not shown, but they were placed to the left of where the display wires are.![A circuit board with wires and wires AI-generated content may be incorrect.](media/472b96aceb492c032d1c6e3a7593675c.png)
+See the fritzing sketch. (Fritzing file is also in the repo) The battery is actually 1200mAh, not 110. Buttons and switches not shown, but they were placed to the left of where the display wires are.![screenshot](images/fritzing.jpg)
 
 # Server
 
 ### About
 
-A Linux server is used in conjunction with the alarm clock (files that run on the server are in the server folder of the repo. This server hosts the discord bot, a message cache, and an http server to toggle the lights and interact with the server cache.
+A Linux server is used in conjunction with the alarm clock (files that run on the server are in the server folder of the repo). This server hosts the discord bot, a message cache, and an http server to toggle the lights and interact with the server cache.
 
 ### Why?
 
-The alarm clock runs on micropython. This cannot support a discord bot nor the python-kasa library used to control the smart switch. Furthermore, if the alarm clock’s webserver isn’t online, then someone cannot send a message, thus, a server cache is used. A Pi Zero could be used, but that isn’t breadboard friendly (gpios are all on one side).
+The alarm clock runs on micropython. This cannot support a discord bot nor the python-kasa library used to control the smart switch. Furthermore, if the alarm clock’s webserver isn’t online, then someone cannot send a message. Thus, a server cache is used. A Pi Zero could be used, but that isn’t breadboard friendly (gpios are all on one side).
 
 # Kudos
 
