@@ -13,6 +13,7 @@ This project modified this alarm clock, giving it a large oled display and Wi-Fi
 -   Motor direction and speed control
     -   Sync McQueen to ringtone
 -   Icons representing status (Wi-Fi, alarm, new message, on battery/power)
+-   Reset button
 
 # Server
 
