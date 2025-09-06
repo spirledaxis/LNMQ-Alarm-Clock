@@ -25,7 +25,8 @@ class Schedule:
         minute = now[5]
 
         for job in self.jobs:
-            if (job["hour"] == hour and job["minute"] == minute and not job["triggered"]):
+            if (job["hour"] == hour and job["minute"]
+                    == minute and not job["triggered"]):
                 job["callback"]()
                 job["triggered"] = True
 

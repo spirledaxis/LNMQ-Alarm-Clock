@@ -37,15 +37,16 @@ class MessageViewer(DisplayState):
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
         self.spacing = 4 + 8  # add 8 to compensate for the icons
         self.display_manager = display_manager
-        self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s*1000)
-        self.change_motd = Neotimer(config.messenger_cycle_time_s*1000)
+        self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s * 1000)
+        self.change_motd = Neotimer(config.messenger_cycle_time_s * 1000)
         self.swap_icons.start()
         self.change_motd.start()
 
         self.invert = True
 
         def make_icon(data):
-            return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
+            return framebuf.FrameBuffer(
+                bytearray(data), 8, 8, framebuf.MONO_VLSB)
         self.inverted_battery = make_icon(
             [0xff, 0x80, 0xbe, 0x3e, 0x3e, 0xbe, 0x80, 0xff])
         self.inverted_plug = make_icon(
@@ -69,7 +70,7 @@ class MessageViewer(DisplayState):
 
     def drift(self, min, max):
         return NotImplementedError("You need to actually apply the drifts...")
-        idk = range(min, max+1)
+        idk = range(min, max + 1)
         offsets = [coord for coord in idk]
         return random.choice(offsets)
 
@@ -116,7 +117,7 @@ class MessageViewer(DisplayState):
         if len(self.home.new_motds) != 0:
             num_icons += 1
 
-        total_width = (num_icons * 8) + ((num_icons - 1) * (self.spacing-8))
+        total_width = (num_icons * 8) + ((num_icons - 1) * (self.spacing - 8))
         start_x = (self.display.width - total_width) // 2
 
         x = start_x
@@ -153,7 +154,7 @@ class MessageViewer(DisplayState):
                 x += self.spacing
         else:
             self.display.fill_rectangle(
-                0, y, self.display.width, y+8, invert=True)
+                0, y, self.display.width, y + 8, invert=True)
             if self.display_manager.switch.get_state():
                 self.display.draw_sprite(
                     self.home.bell_icon_fb, x=x, y=y, w=8, h=8)

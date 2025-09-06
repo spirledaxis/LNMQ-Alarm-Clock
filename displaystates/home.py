@@ -50,7 +50,8 @@ class Home(DisplayState):
         self.time_len = 0
 
         def make_icon(data):
-            return framebuf.FrameBuffer(bytearray(data), 8, 8, framebuf.MONO_VLSB)
+            return framebuf.FrameBuffer(
+                bytearray(data), 8, 8, framebuf.MONO_VLSB)
 
         self.bell_icon_fb = make_icon(
             [0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
@@ -79,7 +80,8 @@ class Home(DisplayState):
         time_len = timefont.measure_text(time_text)
 
         self.time_len = timefont.measure_text(time_text)
-        # TODO: 1 is tuesday, supposedely. Idk if the tuple is weird or my function is cooked, thats why theres +1 for now. Fix later.
+        # TODO: 1 is tuesday, supposedely. Idk if the tuple is weird or my
+        # function is cooked, thats why theres +1 for now. Fix later.
         date_text = f'{timeutils.daynum_to_daystr(day_name_int+1)} | {timeutils.monthnum_to_monthstr(month)} {month_day}'
         date_text_len = bally.measure_text(date_text)
         if date_text_len >= 128:
@@ -89,17 +91,17 @@ class Home(DisplayState):
         # origin is in the bottom right
 
         # Display the time
-        self.display.draw_text((self.display.width+time_len) // 2, self.display.height // 2 - timefont.height // 2,
+        self.display.draw_text((self.display.width + time_len) // 2, self.display.height // 2 - timefont.height // 2,
                                time_text, timefont, rotate=180)
 
         # display weekday, month, and mday
-        self.display.draw_text((self.display.width + date_text_len) // 2, ((self.display.height // 2) - timefont.height // 2)-10,
+        self.display.draw_text((self.display.width + date_text_len) // 2, ((self.display.height // 2) - timefont.height // 2) - 10,
                                date_text, bally, rotate=180)
 
         # display seconds bar
-        len_line = int((second/60)*127 + 1)
-        self.display.draw_hline(127-len_line, 63, len_line)
-        self.display.draw_hline(127-len_line, 62, len_line)
+        len_line = int((second / 60) * 127 + 1)
+        self.display.draw_hline(127 - len_line, 63, len_line)
+        self.display.draw_hline(127 - len_line, 62, len_line)
 
     def scroll_motd(self):
         motd_len = bally.measure_text(self.motd)
@@ -136,30 +138,30 @@ class Home(DisplayState):
     def draw_icons(self):
         if self.display_manager.switch.get_state():
             self.display.draw_sprite(self.bell_icon_fb, x=(
-                (self.display.width-self.time_len) // 4)+4, y=(self.display.height // 2) + 4, w=8, h=8)
+                (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) + 4, w=8, h=8)
         else:
-            self.display.fill_rectangle(x=((self.display.width-self.time_len) // 4)-4, y=(
+            self.display.fill_rectangle(x=((self.display.width - self.time_len) // 4) - 4, y=(
                 self.display.height // 2) + 4, w=8, h=8, invert=True)
 
         if self.usb_power.value() == 1:
             self.display.draw_sprite(self.plug_icon, x=(
-                (self.display.width-self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
+                (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
         else:
             self.display.draw_sprite(self.battery_icon, x=(
-                (self.display.width-self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
+                (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
 
         if network.WLAN(network.WLAN.IF_STA).isconnected():
             self.display.draw_sprite(self.wifi_icon, x=(
-                (self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
+                (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
         else:
             self.display.draw_sprite(self.no_wifi_icon, x=(
-                (self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
+                (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
 
         if len(self.new_motds) != 0:
             self.display.draw_sprite(self.mail_icon, x=(
-                (self.display.width-self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8)
+                (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8)
         else:
-            self.display.fill_rectangle(x=((self.display.width-self.time_len) // 4) - 8, y=(
+            self.display.fill_rectangle(x=((self.display.width - self.time_len) // 4) - 8, y=(
                 self.display.height // 2) - 8, w=8, h=8, invert=True)
 
     def draw_cube(self):
@@ -192,7 +194,7 @@ class Home(DisplayState):
 
         # Function to calculate the X-axis rotation matrix
         def Xrotation(angle):
-            radDegree = angle * math.pi/180  # Convert angle to radians
+            radDegree = angle * math.pi / 180  # Convert angle to radians
             return [
                 [1, 0, 0],
                 [0, math.cos(radDegree), -math.sin(radDegree)],
@@ -201,7 +203,7 @@ class Home(DisplayState):
 
         # Function to calculate the Z-axis rotation matrix
         def Zrotation(angle):
-            radDegree = angle * math.pi/180  # Convert angle to radians
+            radDegree = angle * math.pi / 180  # Convert angle to radians
             return [
                 [math.cos(radDegree), -math.sin(radDegree), 0],
                 [math.sin(radDegree), math.cos(radDegree), 0],
@@ -210,7 +212,7 @@ class Home(DisplayState):
 
         # Function to calculate the Y-axis rotation matrix
         def Yrotation(angle):
-            radDegree = angle * math.pi/180  # Convert angle to radians
+            radDegree = angle * math.pi / 180  # Convert angle to radians
             return [
                 [math.cos(radDegree), 0, math.sin(radDegree)],
                 [0, 1, 0],
@@ -246,8 +248,8 @@ class Home(DisplayState):
 
         # Draw edges between the points
         pointX = int(self.display.width -
-                     ((self.display.width - self.time_len)//4))
-        pointY = int(self.display.height//2 + 2)
+                     ((self.display.width - self.time_len) // 4))
+        pointY = int(self.display.height // 2 + 2)
         for start, end in connections:
             startPoint = rotatedPoints[start]  # Start vertex
             endPoint = rotatedPoints[end]  # End vertex

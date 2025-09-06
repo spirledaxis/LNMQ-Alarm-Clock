@@ -10,7 +10,7 @@ def fetch_data():
 
 
 def id_search(data, id):
-    return data[id-1]
+    return data[id - 1]
 
 
 def author_search(data, author):

@@ -106,7 +106,7 @@ class Alarm:
             self.ringtone = alarm['ringtone']
 
         self.hour = timeutils.to_military_time(alarm_hour, alarm_ampm)
-        self.timeout_timer = Neotimer(timeout_s*1000)
+        self.timeout_timer = Neotimer(timeout_s * 1000)
         self.enabled = switch.get_state()
         self.switch = switch
         self.is_active = False
@@ -161,7 +161,7 @@ class Alarm:
         with open('alarm.json', 'r') as f:
             alarm_message = json.load(f)['alarm_message']
         with open('ringtones.json', 'r') as f:
-            volume = json.load(f)[self.ringtone-1]['volume']
+            volume = json.load(f)[self.ringtone - 1]['volume']
 
         print("alarm should go off now")
         self.locked = True
@@ -237,7 +237,8 @@ class RepeatButton(Button):
 
     def update(self):
         self.update_state()
-        if self.init_delay.hold_signal(self.state) and self.repeat_ms.repeat_execution() and self.state == 1:
+        if self.init_delay.hold_signal(
+                self.state) and self.repeat_ms.repeat_execution() and self.state == 1:
             self.callback_func()
 
         if self.state == 1:

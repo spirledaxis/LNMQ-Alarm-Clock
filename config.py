@@ -57,7 +57,7 @@ messenger_cycle_time_s = 30
 messenger_icon_cycle_time_s = 10
 alarm_timeout_min = 5
 bsod_timeout_s = 15
-display_timer = Neotimer(display_timeout_min*60_000)
+display_timer = Neotimer(display_timeout_min * 60_000)
 
 # other
 ip = '192.168.1.51'

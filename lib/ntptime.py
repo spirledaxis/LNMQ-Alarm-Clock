@@ -3,9 +3,11 @@ import socket
 import struct
 import machine  # type: ignore
 
-# The NTP host can be configured at runtime by doing: ntptime.host = 'myhost.org'
+# The NTP host can be configured at runtime by doing: ntptime.host =
+# 'myhost.org'
 host = "time.windows.com"
-# The NTP socket timeout can be configured at runtime by doing: ntptime.timeout = 2
+# The NTP socket timeout can be configured at runtime by doing:
+# ntptime.timeout = 2
 
 timeout = 1
 

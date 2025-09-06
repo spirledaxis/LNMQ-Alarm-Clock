@@ -16,7 +16,7 @@ class DisplayManager:
     def __init__(self):
         self.display_states: list[DisplayState] = None
         self.display = config.display
-        self.display_timer = Neotimer(config.display_timeout_min*60_000)
+        self.display_timer = Neotimer(config.display_timeout_min * 60_000)
         self.display_timer.start()
         self.switch = Switch(config.switch)
 
@@ -32,9 +32,9 @@ class DisplayManager:
 
         if self.current_state_obj.name == 'message_reader':
             self.display_timer = Neotimer(
-                config.display_messenger_timeout_min*60_000)
+                config.display_messenger_timeout_min * 60_000)
         else:
-            self.display_timer = Neotimer(config.display_timeout_min*60_000)
+            self.display_timer = Neotimer(config.display_timeout_min * 60_000)
 
         self.display_timer.start()
 

@@ -1,3 +1,16 @@
+from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
+import errno
+from config import display
+import json
+from components import Alarm, Switch, Motor
+import webserver
+import motd_parser
+from lib.neotimer import Neotimer
+from lib.ntptime import settime
+import lib.connect as connect
+import displaystates.mode as mode
+import socket
+from machine import RTC  # type: ignore
 import framebuf  # type: ignore
 import config
 
@@ -70,22 +83,6 @@ config.display.draw_sprite(icon, x=0, y=0, w=128, h=64)
 config.display.present()
 
 
-from machine import RTC  # type: ignore
-import socket
-import displaystates.mode as mode
-import lib.connect as connect
-from lib.ntptime import settime
-from lib.neotimer import Neotimer
-import motd_parser
-import webserver
-from components import Alarm, Switch, Motor
-import json
-from config import display
-import errno
-from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
-
-
-
 # TODO: switch to urequests
 
 def http_get(host, port, path):
@@ -105,7 +102,7 @@ def http_get(host, port, path):
             data += chunk
         header_end = data.find(b"\r\n\r\n")
         if header_end != -1:
-            return data[header_end+4:].decode()
+            return data[header_end + 4:].decode()
         return data.decode()
     finally:
         s.close()
@@ -119,7 +116,8 @@ try:
     with open('motds.json', 'r') as f:
         motds = json.load(f)
     try:
-        cached_motds = http_get(config.server_ip, config.server_port, "/fetch_cache")
+        cached_motds = http_get(
+            config.server_ip, config.server_port, "/fetch_cache")
         cached_motds = json.loads(cached_motds)
         print("Found cached motds!", cached_motds)
         highest_id = motds[-1]["id"]
@@ -143,7 +141,7 @@ try:
         if new_alarm_msg != '' and new_alarm_msg != '404 Not Found':
             print("got new alarm message")
             with open(f'alarm.json', 'r') as f:
-                #print(f.read())
+                # print(f.read())
                 data = json.load(f)
             data['alarm_message'] = new_alarm_msg
 
@@ -155,7 +153,8 @@ try:
             with open('alarm.json', 'r') as f:
                 data = json.load(f)
 
-            data['alarm_message'] = motd_parser.select_random_motd(motds)['motd']
+            data['alarm_message'] = motd_parser.select_random_motd(motds)[
+                'motd']
 
             with open('alarm.json', 'w') as f:
                 json.dump([data], f)
@@ -174,7 +173,7 @@ try:
 
     myalarm = Alarm(config.alarm_timeout_min * 60,
                     config.motor, config.speaker, switch)
-    
+
     display_manager = mode.DisplayManager()
     home = Home(display_manager, myalarm, aliases.home)
     alarm = SetAlarm(display_manager, myalarm, aliases.set_alarm)
@@ -187,7 +186,7 @@ try:
     prev_dur = 0
     lock_ntptime = False
     config.display.set_contrast(0)
-    
+
     while True:
         display_manager.run_current_state()
         now = rtc.datetime()
@@ -222,12 +221,12 @@ try:
         # ntp
         hour = now[4]
         minute = now[5]
-        if hour == 2+12 and minute == 5 and not lock_ntptime:
+        if hour == 2 + 12 and minute == 5 and not lock_ntptime:
             lock_ntptime = True
             print("setting time via ntp...")
             settime()
 
-        elif hour != 2+12 and minute != 5:
+        elif hour != 2 + 12 and minute != 5:
             lock_ntptime = False
 
 except Exception as e:
@@ -303,7 +302,7 @@ except Exception as e:
     icon = framebuf.FrameBuffer(failicon, 128, 64, framebuf.MONO_VLSB)
     display.draw_sprite(icon, x=0, y=0, w=128, h=64)
     display.present()
-    timer = Neotimer(config.bsod_timeout_s*1000)
+    timer = Neotimer(config.bsod_timeout_s * 1000)
     timer.start()
     from utime import sleep_ms  # type: ignore
     while not timer.finished():
