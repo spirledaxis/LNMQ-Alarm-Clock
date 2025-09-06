@@ -4,7 +4,7 @@ import config
 from lib.xglcd_font import XglcdFont
 import json
 from lib.neotimer import Neotimer
-from utime import ticks_ms #type: ignore
+from utime import ticks_ms  # type: ignore
 
 timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
@@ -71,6 +71,7 @@ class DisplayState:
         self.active = False
         self.button_map = buttonmap
         self.display_manager = display_manager
+
 
 if __name__ == '__main__':
     from displaystates import Home, DisplayOff, MessageViewer, SetAlarm

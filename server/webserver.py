@@ -104,17 +104,17 @@ try:
 
             body = 'cleared alarm message cache'
             response = (
-                    'HTTP/1.1 200 OK\r\n'
-                    'Content-Type: text/plain\r\n'
-                    f'Content-Length: {len(body)}\r\n'
-                    'Connection: close\r\n'
-                    '\r\n'
-                    f'{body}'
-                )
+                'HTTP/1.1 200 OK\r\n'
+                'Content-Type: text/plain\r\n'
+                f'Content-Length: {len(body)}\r\n'
+                'Connection: close\r\n'
+                '\r\n'
+                f'{body}'
+            )
             cl.sendall(response.encode())
             time.sleep(0.1)
             cl.close()
-            
+
         elif 'GET /fetch_alarm_msg' in request:
             with open('alarm_message_cache.txt', 'r') as f:
                 body = f.read()

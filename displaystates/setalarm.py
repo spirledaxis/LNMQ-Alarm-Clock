@@ -4,6 +4,8 @@ from components import Button, RepeatButton, set_movement_by_ringtone
 import config
 import json
 from lib import timeutils
+
+
 class SetAlarm(DisplayState):
     def __init__(self, display_manager, alarm, name):
         self.button_map = [
@@ -23,7 +25,7 @@ class SetAlarm(DisplayState):
             self.minute = int(alarm_json['minute'])
             self.ampm = alarm_json['ampm']
             self.ringtone_index = alarm_json['ringtone']
-    
+
         with open('ringtones.json', 'r') as f:
             self.ringtone_json = json.load(f)
 
@@ -31,7 +33,7 @@ class SetAlarm(DisplayState):
         for ringtone in self.ringtone_json:
             if ringtone['index'] == self.ringtone_index:
                 self.volume = ringtone['volume']
-        
+
         self.volume_y = (self.display.height // 2 - timefont.height // 2)-15
         self.selection = 'minute'
         self.ringtone_y = self.display.height // 2 + \
@@ -42,6 +44,7 @@ class SetAlarm(DisplayState):
         self.display_manager = display_manager
         self.motor = config.motor
         self.motor.ready = False
+
     def on_fwd(self):
         if self.selection == 'minute':
             if self.minute + 5 >= 60:
@@ -58,7 +61,7 @@ class SetAlarm(DisplayState):
                 self.ringtone_index = 1
             else:
                 self.ringtone_index += 1
-            
+
             for ringtone in self.ringtone_json:
                 if ringtone['index'] == self.ringtone_index:
                     self.volume = ringtone['volume']
@@ -75,7 +78,7 @@ class SetAlarm(DisplayState):
                 self.volume = 1
             else:
                 self.volume += 1
-            
+
     def on_rev(self):
         if self.selection == 'minute':
             if self.minute - 5 < 0:
@@ -92,7 +95,7 @@ class SetAlarm(DisplayState):
                 self.ringtone_index = self.ringtone_len
             else:
                 self.ringtone_index -= 1
-            
+
             for ringtone in self.ringtone_json:
                 if ringtone['index'] == self.ringtone_index:
                     self.volume = ringtone['volume']
@@ -125,7 +128,7 @@ class SetAlarm(DisplayState):
             self.hour = 6
         elif self.selection == 'ringtone':
             self.ringtone_index = self.ringtone_index//2
-   
+
             for ringtone in self.ringtone_json:
                 if ringtone['index'] == self.ringtone_index:
                     self.volume = ringtone['volume']
@@ -136,7 +139,7 @@ class SetAlarm(DisplayState):
     def on_exit(self):
         with open('alarm.json', 'r') as f:
             alarm_msg = json.load(f)['alarm_message']
-       
+
         data = {
             "hour": self.hour,
             "minute": self.minute,
@@ -149,7 +152,7 @@ class SetAlarm(DisplayState):
         for ringtone in self.ringtone_json:
             if ringtone['index'] == self.ringtone_index:
                 ringtone['volume'] = self.volume
-        
+
         with open('ringtones.json', 'w') as f:
             json.dump(self.ringtone_json, f)
 
@@ -183,8 +186,9 @@ class SetAlarm(DisplayState):
 
         volume_percentage = round((self.volume/30) * 100)
         volume_text = f"Volume: {volume_percentage}% ({self.volume})"
-        self.display.draw_text((self.display.width + self.time_len) // 2, self.volume_y, volume_text, bally, rotate=180)
-        
+        self.display.draw_text((self.display.width + self.time_len) //
+                               2, self.volume_y, volume_text, bally, rotate=180)
+
     def selection_line(self):
         x = (self.display.width+self.time_len) // 2
         y = self.display.height // 2 - timefont.height // 2
@@ -199,25 +203,24 @@ class SetAlarm(DisplayState):
 
         if self.selection == 'hour':
             self.display.draw_hline(x - hour_len, y-3, hour_len)
-           
+
         elif self.selection == 'minute':
             self.display.draw_hline(
                 x - hour_len - colon_len - minute_len, y-3, minute_len)
-           
+
         elif self.selection == 'ampm':
             self.display.draw_hline(
                 x - hour_len - colon_len - minute_len - space_len - ampm_len, y-3, ampm_len)
-          
+
         elif self.selection == 'ringtone':
             self.display.draw_vline(
                 (self.display.width + self.time_len) // 2, self.ringtone_y, bally.height)
-           
+
         elif self.selection == 'volume':
             self.display.draw_vline(
                 (self.display.width + self.time_len) // 2, self.volume_y, bally.height
             )
-          
-            
+
     def main(self):
         self.display_alarm_time()
         self.selection_line()

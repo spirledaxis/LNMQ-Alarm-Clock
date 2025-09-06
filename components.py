@@ -6,6 +6,7 @@ import json
 from lib import timeutils
 from movements import *
 
+
 def set_movement_by_ringtone(ringtone, motor):
     if ringtone == 13:
         motor.set_movement(freedom_dive)
@@ -13,6 +14,7 @@ def set_movement_by_ringtone(ringtone, motor):
         motor.set_movement(i_am_speed)
     else:
         motor.set_movement(custom_movement)
+
 
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
@@ -96,7 +98,7 @@ class Alarm:
     def __init__(self, timeout_s, motor, speaker, switch):
         """use military time for the hour. """
         with open('alarm.json', 'r') as f:
-            #print(f.read())
+            # print(f.read())
             alarm = json.load(f)
             alarm_hour = int(alarm['hour'])
             alarm_ampm = alarm['ampm']
@@ -113,8 +115,6 @@ class Alarm:
         self.speaker = speaker
         self.original_ringtone = self.ringtone
         set_movement_by_ringtone(self.ringtone, self.motor)
-
-
 
     def update(self, now, home):
         """
@@ -154,10 +154,9 @@ class Alarm:
         if self.locked:
             return
 
-
         if now[2] == 1:
             self.original_ringtone = self.ringtone
-            self.ringtone = 16 #first of the month ringtone
+            self.ringtone = 16  # first of the month ringtone
 
         with open('alarm.json', 'r') as f:
             alarm_message = json.load(f)['alarm_message']
@@ -187,6 +186,7 @@ class Alarm:
         self.is_active = False
         self.ringtone = self.original_ringtone
 
+
 class Button:
     def __init__(self, pin, callback, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -196,7 +196,7 @@ class Button:
         self.prev_state = 0
         self.is_debounced = False
         self.pressed = False
-        
+
     def update(self):
         if self.debounce_timer.debounce_signal(not self.pin.value()):
             self.is_debounced = True
@@ -221,7 +221,6 @@ class Button:
         self.prev_state = self.state
 
 
-
 class RepeatButton(Button):
     def __init__(self, pin, callback, init_delay_ms=200, repeat_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -229,6 +228,7 @@ class RepeatButton(Button):
         self.init_delay = Neotimer(init_delay_ms)
         self.repeat_ms = Neotimer(repeat_ms)
         self.pressed = False
+
     def update_state(self):
         if self.pin.value() == 0:  # the pull up resistor inverts the signal, pressed reads as 0
             self.state = 1  # self.state and prev_state use 1 as pressed, opposite to pin.value
@@ -239,11 +239,12 @@ class RepeatButton(Button):
         self.update_state()
         if self.init_delay.hold_signal(self.state) and self.repeat_ms.repeat_execution() and self.state == 1:
             self.callback_func()
-    
+
         if self.state == 1:
             self.pressed = True
         else:
             self.pressed = False
+
 
 class Switch:
     def __init__(self, pin, debounce_ms=100):
@@ -274,13 +275,16 @@ class Switch:
     def get_state(self):
         return self.stable_state
 
+
 if __name__ == '__main__':
     counter = 0
     counter2 = 0
+
     def foo():
         global counter
         counter += 1
         print(f"bar {(counter)}")
+
     def eggs():
         global counter2
         counter2 += 1

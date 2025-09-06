@@ -1,9 +1,9 @@
 import config
 from components import Button
 import json
-from machine import Pin, RTC #type: ignore
-import framebuf #type: ignore
-import network #type: ignore
+from machine import Pin, RTC  # type: ignore
+import framebuf  # type: ignore
+import network  # type: ignore
 import lib.timeutils as timeutils
 import math
 import random
@@ -11,6 +11,8 @@ import motd_parser
 from displaystates.mode import DisplayState, timefont, bally
 import socket
 from displaystates import aliases
+
+
 class Home(DisplayState):
     def __init__(self, display_manager, alarm, name):
         self.button_map = [
@@ -330,7 +332,7 @@ class Home(DisplayState):
         self.display_manager.set_active_state(aliases.message_reader)
 
     def main(self):
-        self.draw_cube()
+        # self.draw_cube()
         self.clock()
         self.draw_icons()
 

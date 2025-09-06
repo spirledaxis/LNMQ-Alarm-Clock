@@ -2,12 +2,13 @@ from displaystates.mode import DisplayState, timefont, bally
 from components import Button
 import config
 import motd_parser
-from machine import Pin #type: ignore
-import framebuf #type: ignore
-import network #type: ignore
+from machine import Pin  # type: ignore
+import framebuf  # type: ignore
+import network  # type: ignore
 from lib.neotimer import Neotimer
 import json
 from displaystates import aliases
+
 
 class MessageViewer(DisplayState):
     # TODO: add drift to stop burn in

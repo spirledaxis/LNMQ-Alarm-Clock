@@ -2,6 +2,8 @@ from displaystates import aliases
 from components import Button
 import config
 from displaystates.mode import DisplayState
+
+
 class DisplayOff(DisplayState):
     def __init__(self, display_manager, name):
         self.button_map = [Button(config.snd_fx_l, self.exit)]
