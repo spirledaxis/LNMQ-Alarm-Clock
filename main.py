@@ -1,19 +1,5 @@
-import random
-from machine import RTC  # type: ignore
-import socket
-import displaystates.mode as mode
-import lib.connect as connect
-from lib.ntptime import settime
-from lib.neotimer import Neotimer
-import motd_parser
-import webserver
-from components import Alarm, Switch, Motor
-import config
-import json
 import framebuf  # type: ignore
-from config import display
-import errno
-from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
+import config
 
 booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0xc0, 0xc0, 0x40, 0xc0, 0xc0,
@@ -80,8 +66,24 @@ booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
 icon = framebuf.FrameBuffer(booticon, 128, 64, framebuf.MONO_VLSB)
-display.draw_sprite(icon, x=0, y=0, w=128, h=64)
-display.present()
+config.display.draw_sprite(icon, x=0, y=0, w=128, h=64)
+config.display.present()
+
+
+from machine import RTC  # type: ignore
+import socket
+import displaystates.mode as mode
+import lib.connect as connect
+from lib.ntptime import settime
+from lib.neotimer import Neotimer
+import motd_parser
+import webserver
+from components import Alarm, Switch, Motor
+import json
+from config import display
+import errno
+from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
+
 
 
 # TODO: switch to urequests
@@ -146,7 +148,7 @@ try:
             data['alarm_message'] = new_alarm_msg
 
             with open(f'alarm.json', 'w') as f:
-                json.dump([data], f)
+                json.dump(data, f)
 
             http_get(config.server_ip, config.server_port, "/clear_alarm_msg")
         if new_alarm_msg == 'random':
@@ -185,8 +187,7 @@ try:
     prev_dur = 0
     lock_ntptime = False
     config.display.set_contrast(0)
-    now = rtc.datetime()
-    myalarm.fire(now, home)
+    
     while True:
         display_manager.run_current_state()
         now = rtc.datetime()
