@@ -121,15 +121,14 @@ class SetAlarm(DisplayState):
         with open('alarm.json', 'r') as f:
             alarm_msg = json.load(f)['alarm_message']
        
-        data = [{
+        data = {
             "hour": self.hour,
             "minute": self.minute,
             "ampm": self.ampm,
             "ringtone": self.ringtone_index,
             "volume": self.volume,
             "alarm_message": alarm_msg,
-
-        }]
+        }
 
         for ringtone in self.ringtone_json:
             if ringtone['index'] == self.ringtone_index:
