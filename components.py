@@ -1,3 +1,4 @@
+import config
 from lib.neotimer import Neotimer
 from machine import Pin, PWM  # type: ignore
 from lib.neotimer import Neotimer
@@ -194,23 +195,21 @@ class Button:
         self.state = 0
         self.prev_state = 0
         self.is_debounced = False
-        self.press_counter = 0
         self.pressed = False
-
+        
     def update(self):
         if self.debounce_timer.debounce_signal(not self.pin.value()):
             self.is_debounced = True
 
         if self.pin.value() == 0:  # the pull up resistor inverts the signal, pressed reads as 0
-            self.state = 1  # self.state and prev_state use 0 as not pressed, opposite to pin.value
+            self.state = 1  # self.state and prev_state use 1 as pressed, opposite to pin.value
         else:
             self.state = 0
 
-        if (self.state == 0 and self.prev_state == 1):
+        if (self.state == 1 and self.prev_state == 0):
             if self.is_debounced:
                 self.pressed = True
                 self.callback_func()
-                self.press_counter += 1
             else:
                 print("under debounce cooldown")
 
@@ -221,6 +220,30 @@ class Button:
 
         self.prev_state = self.state
 
+
+
+class RepeatButton(Button):
+    def __init__(self, pin, callback, init_delay_ms=200, repeat_ms=100):
+        self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
+        self.callback_func = callback
+        self.init_delay = Neotimer(init_delay_ms)
+        self.repeat_ms = Neotimer(repeat_ms)
+        self.pressed = False
+    def update_state(self):
+        if self.pin.value() == 0:  # the pull up resistor inverts the signal, pressed reads as 0
+            self.state = 1  # self.state and prev_state use 1 as pressed, opposite to pin.value
+        else:
+            self.state = 0
+
+    def update(self):
+        self.update_state()
+        if self.init_delay.hold_signal(self.state) and self.repeat_ms.repeat_execution() and self.state == 1:
+            self.callback_func()
+    
+        if self.state == 1:
+            self.pressed = True
+        else:
+            self.pressed = False
 
 class Switch:
     def __init__(self, pin, debounce_ms=100):
@@ -250,3 +273,21 @@ class Switch:
 
     def get_state(self):
         return self.stable_state
+
+if __name__ == '__main__':
+    counter = 0
+    counter2 = 0
+    def foo():
+        global counter
+        counter += 1
+        print(f"bar {(counter)}")
+    def eggs():
+        global counter2
+        counter2 += 1
+        print(f"spam ({counter2})")
+
+    mybutton = Button(config.fwd, eggs)
+    myrepeatbutton = RepeatButton(config.fwd, foo, 200, 100)
+    while True:
+        myrepeatbutton.update()
+        mybutton.update()

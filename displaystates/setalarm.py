@@ -1,6 +1,6 @@
 from displaystates import aliases
 from displaystates.mode import DisplayState, timefont, bally
-from components import Button, set_movement_by_ringtone
+from components import Button, RepeatButton, set_movement_by_ringtone
 import config
 import json
 from lib import timeutils
@@ -11,7 +11,10 @@ class SetAlarm(DisplayState):
             Button(config.rev, self.on_rev),
             Button(config.alm_set, self.on_exit),
             Button(config.snd_fx_l, self.on_selection),
-            Button(config.snze_l, self.preview)
+            Button(config.snze_l, self.preview),
+            Button(config.clk_set, self.goto_midpoint),
+            RepeatButton(config.fwd, self.on_fwd),
+            RepeatButton(config.rev, self.on_rev),
         ]
         super().__init__(self.button_map, name, display_manager)
         with open('alarm.json', 'r') as f:
@@ -73,8 +76,6 @@ class SetAlarm(DisplayState):
             else:
                 self.volume += 1
             
-
-
     def on_rev(self):
         if self.selection == 'minute':
             if self.minute - 5 < 0:
@@ -106,6 +107,7 @@ class SetAlarm(DisplayState):
                 self.volume = 30
             else:
                 self.volume -= 1
+
     def preview(self):
         if not config.speaker.queryBusy():
             self.motor.ready = True
@@ -116,6 +118,20 @@ class SetAlarm(DisplayState):
             config.speaker.pause()
             self.motor.stop()
 
+    def goto_midpoint(self):
+        if self.selection == 'minute':
+            self.minute = 30
+        elif self.selection == 'hour':
+            self.hour = 6
+        elif self.selection == 'ringtone':
+            self.ringtone_index = self.ringtone_index//2
+   
+            for ringtone in self.ringtone_json:
+                if ringtone['index'] == self.ringtone_index:
+                    self.volume = ringtone['volume']
+
+        elif self.selection == 'volume':
+            self.volume = 15
 
     def on_exit(self):
         with open('alarm.json', 'r') as f:
