@@ -110,7 +110,7 @@ class Alarm:
         self.enabled = switch.get_state()
         self.switch = switch
         self.is_active = False
-        self.locked = False  # used so alarm logic doesn't go off for the entire minute
+        self.locked = False  # used so we don't call fire for the entire minute
         self.motor = motor
         self.speaker = speaker
         self.original_ringtone = self.ringtone
@@ -134,7 +134,7 @@ class Alarm:
             self.fire(now, home)
             print("firing")
 
-        elif now_hour != self.hour and now_minute != self.minute and self.locked:
+        elif now_minute != self.minute and self.locked:
             self.locked = False
 
         if self.timeout_timer.finished():
