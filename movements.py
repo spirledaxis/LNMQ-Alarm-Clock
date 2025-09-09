@@ -1,19 +1,19 @@
 i_am_speed = [
-    ('w', 400, 100),
-    ('r', 1133, 30),  # exhale
-    ('l', 733, 40),  # exhale 2
-    ('w', 6000, 100),
-    ('r', 2184, 100),  # racing sounds
-    ('l', 1133, 80),  # one winner
-    ('r', 1183, 80),  # 42 losers
-    ('w', 2234, 100),  # I eat losers for breakfeast
-    ('r', 2633, 100),  # racing sounds
-    ('w', 813, 100),  # "speed"
-    ('r', 2500, 100),  # racing sounds
-    ('l', 884, 80),  # I am faster than fast
-    ('r', 1150, 80),  # quicker than quick
-    ('w', 1433, 100),  # I am lightning
-]
+    ('w', 600, 100),     
+    ('r', 1133, 30), #exhale 
+    ('l', 733, 40), #exhale 2
+    ('w', 6300, 100),
+    ('r', 2184, 100), #racing sounds
+    ('l', 1133, 80), #one winner
+    ('r', 1183, 80), #42 losers
+    ('w', 2634, 100), #I eat losers for breakfeast
+    ('r', 2633, 100), #racing sounds
+    ('w', 813, 100), #"speed"
+    ('r', 2500, 100), #racing sounds
+    ('l', 884, 80), #I am faster than fast
+    ('r', 1150, 80), #quicker than quick
+    ('w', 1433, 100), #I am lightning
+    ]
 
 freedom_dive = [
     ('l', 333.0, 100),
@@ -87,3 +87,50 @@ custom_movement = [
     ('r', 500, 90),   # final strong move right
     ('l', 500, 90)    # final strong move left
 ]
+
+eta = [
+    ('w', 125, 100),
+    ('r', 416, 100),
+    ('l', 334, 100),
+    ('r', 291, 100),
+    ('l', 125, 100),
+    ('r', 207, 100),
+    ('l', 210, 100),
+    ('r', 292, 100),
+    ('l', 250, 100),
+    ('r', 375, 100),
+    ('l', 375, 100),
+    ('r', 333, 100),
+    ('l', 83.0, 100),
+    ('r', 167, 100),
+    ('l', 208, 100),
+    ('r', 500, 100),
+    ('l', 417, 100),
+    ('r', 375, 100),
+    ('l', 292, 100),
+    ('r', 125, 100),
+    ('l', 125, 100),
+    ('r', 291, 100),
+    ('l', 209, 100),
+    ('r', 291, 100),
+    ('l', 375, 100),
+    ('r', 417, 100),
+    ('l', 292, 100),
+    ('r', 125, 100),
+    ('l', 500, 100),
+    ('r', 291, 100),
+    ('l', 125, 100),
+    ('r', 209, 100),
+    ('l', 16000, 60)
+]
+
+
+def set_movement_by_ringtone(ringtone, motor):
+    if ringtone == 13:
+        motor.set_movement(freedom_dive)
+    elif ringtone == 8:
+        motor.set_movement(i_am_speed)
+    elif ringtone == 19:
+        motor.set_movement(eta)
+    else:
+        motor.set_movement(custom_movement)

@@ -3,18 +3,10 @@ from machine import Pin, PWM  # type: ignore
 from lib.neotimer import Neotimer
 import json
 from lib import timeutils
-from movements import *
+from movements import set_movement_by_ringtone
 from utime import sleep_ms
 
-def set_movement_by_ringtone(ringtone, motor):
-    if ringtone == 13:
-        motor.set_movement(freedom_dive)
-    elif ringtone == 8:
-        motor.set_movement(i_am_speed)
-    elif ringtone == 19:
-        motor.set_movement(eta)
-    else:
-        motor.set_movement(custom_movement)
+
 
 class Motor:
     #TODO: run in seperate thread / core for better syncing

@@ -1,4 +1,3 @@
-print("gurt")
 import time
 from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
 import errno
@@ -191,7 +190,7 @@ try:
     prev_dur = 0
     lock_ntptime = False
     config.display.set_contrast(0)
-    
+
     while True:
         start = time.ticks_ms()
         display_manager.run_current_state()

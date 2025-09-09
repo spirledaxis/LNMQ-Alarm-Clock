@@ -1,6 +1,7 @@
 from displaystates import aliases
 from displaystates.mode import DisplayState, timefont, bally
-from components import Button, RepeatButton, set_movement_by_ringtone
+from components import Button, RepeatButton
+from movements import set_movement_by_ringtone
 import config
 import json
 from lib import timeutils
