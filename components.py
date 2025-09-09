@@ -1,21 +1,20 @@
-import config
-from displaystates import aliases
 from lib.neotimer import Neotimer
 from machine import Pin, PWM  # type: ignore
 from lib.neotimer import Neotimer
 import json
 from lib import timeutils
 from movements import *
-
+from utime import sleep_ms
 
 def set_movement_by_ringtone(ringtone, motor):
     if ringtone == 13:
         motor.set_movement(freedom_dive)
     elif ringtone == 8:
         motor.set_movement(i_am_speed)
+    elif ringtone == 19:
+        motor.set_movement(eta)
     else:
         motor.set_movement(custom_movement)
-
 
 class Motor:
     #TODO: run in seperate thread / core for better syncing
@@ -28,6 +27,8 @@ class Motor:
         self.timer = Neotimer(0)
         self.min_pwm = min_pwm
         self.max_pwm = 65535
+
+       
 
     def _interact(self, cmd, speed_percent):
         # speed to duty cycle (speed param is percentage)
@@ -57,7 +58,6 @@ class Motor:
         """
         self.movement = movement
         self.timer.start()
-        self.ready = True
 
     def do_movement(self):
         if not self.ready:
@@ -66,6 +66,7 @@ class Motor:
         if self.timer.finished():
             if self.movement_increment + 1 >= len(self.movement):
                 print("end of movement")
+                self.stop()
                 self.movement_increment = -1
 
             else:
@@ -75,12 +76,20 @@ class Motor:
                 self.timer.start()
                 self._interact(cmd, speed)
 
+    def motor_thread(self):
+        while True:
+            if self.ready:
+                self.do_movement()
+                sleep_ms(5)  # fine-grained updates
+       
+
     def movement_len_ms(self, movement):
         time_ms = 0
         for _, dur_ms, _, in movement:
             time_ms += dur_ms
 
         return time_ms
+
 
     def stop(self):
         print("stopping motor")
@@ -92,9 +101,10 @@ class Motor:
         self.timer.start()
         self.movement_increment = -1
 
-    def start(self):
+    def start(self, reset_increment=False):
         self.ready = True
-
+        if reset_increment:
+            self.movement_increment = -1
 
 class Alarm:
     def __init__(self, timeout_s, motor, speaker, switch):
@@ -147,10 +157,11 @@ class Alarm:
         if self.is_active:
             if not self.speaker.queryBusy():
                 print("going at it again")
-                self.motor.stop()  # stop the motor in the case that the movement is longer than the audio
-                self.speaker.playTrack(1, self.ringtone)
+                #self.motor.stop()  # stop the motor in the case that the movement is longer than the audio
+                # Can't use this because it introduces delay which cooks sync
                 self.motor.start()
-            self.motor.do_movement()
+                self.speaker.playTrack(1, self.ringtone)
+            #self.motor.do_movement()
 
     def fire(self, now, home):
         if self.locked:
@@ -168,9 +179,10 @@ class Alarm:
         print("alarm should go off now")
         self.locked = True
         self.is_active = True
-        config.display.wake()
+        home.display_manager.display.wake()
         home.display_manager.display_timer.restart()
-        home.display_manager.set_active_state(aliases.home)
+        #TODO: switch to alias, but cant import due to circulars
+        home.display_manager.set_active_state("home")
         home.motd_mode = "bounce"
         home.motd = alarm_message
         self.speaker.setVolume(volume)
@@ -280,22 +292,4 @@ class Switch:
         return self.stable_state
 
 
-if __name__ == '__main__':
-    counter = 0
-    counter2 = 0
 
-    def foo():
-        global counter
-        counter += 1
-        print(f"bar {(counter)}")
-
-    def eggs():
-        global counter2
-        counter2 += 1
-        print(f"spam ({counter2})")
-
-    mybutton = Button(config.fwd, eggs)
-    myrepeatbutton = RepeatButton(config.fwd, foo, 200, 100)
-    while True:
-        myrepeatbutton.update()
-        mybutton.update()

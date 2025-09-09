@@ -1,8 +1,11 @@
+print("gurt")
+import time
 from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
 import errno
 from config import display
 import json
 from components import Alarm, Switch, Motor
+import movements
 import webserver
 import motd_parser
 from lib.neotimer import Neotimer
@@ -13,7 +16,7 @@ import socket
 from machine import RTC  # type: ignore
 import framebuf  # type: ignore
 import config
-
+import _thread
 booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0xc0, 0xc0, 0x40, 0xc0, 0xc0,
                       0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -173,6 +176,8 @@ try:
 
     myalarm = Alarm(config.alarm_timeout_min * 60,
                     config.motor, config.speaker, switch)
+    
+    _thread.start_new_thread(config.motor.motor_thread, ())
 
     display_manager = mode.DisplayManager()
     home = Home(display_manager, myalarm, aliases.home)
@@ -186,8 +191,9 @@ try:
     prev_dur = 0
     lock_ntptime = False
     config.display.set_contrast(0)
-
+    
     while True:
+        start = time.ticks_ms()
         display_manager.run_current_state()
         now = rtc.datetime()
 
@@ -212,11 +218,10 @@ try:
         myalarm.update(now, home)
 
         # debug stuff
-        dur = display_manager.display_timer.get_elapsed()
+        dur = display_manager.display_timer.get_remaining()
         done = display_manager.display_timer.finished()
-        cycle_time = dur - prev_dur
-        prev_dur = dur
-        #print(config.display_timeout_min*60_000-dur, done, cycle_time)
+        cycle_time = time.ticks_diff(time.ticks_ms(), start)
+        print(dur, done, cycle_time)
 
         # ntp
         hour = now[4]
@@ -226,7 +231,7 @@ try:
             print("setting time via ntp...")
             settime()
 
-        elif hour != 2 + 12 and minute != 5:
+        elif minute != 5:
             lock_ntptime = False
 
 except Exception as e:
