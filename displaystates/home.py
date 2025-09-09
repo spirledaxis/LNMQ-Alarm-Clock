@@ -19,7 +19,7 @@ class Home(DisplayState):
             Button(config.alm_set, self.goto_alarm),
             Button(config.snze_l, self.on_snze),
             Button(config.fwd, self.read_msg),
-            Button(config.snd_fx_l, self.toggle_display),
+            Button(config.snd_fx_l, self.off_display),
             Button(config.clk_set, self.on_clk)
         ]
         super().__init__(self.button_map, name, display_manager)
@@ -271,12 +271,8 @@ class Home(DisplayState):
     def goto_alarm(self):
         self.display_manager.set_active_state(aliases.set_alarm)
 
-    def toggle_display(self):
-        # TODO: switch this to move to display off state
-        if not self.display.on:
-            self.display.wake()
-        else:
-            config.display.sleep()
+    def off_display(self):
+        self.display_manager.set_active_state(aliases.display_off)
 
     def read_msg(self):
         print("reading message")
