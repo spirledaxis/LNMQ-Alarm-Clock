@@ -1,4 +1,5 @@
 import config
+from displaystates import aliases
 from lib.neotimer import Neotimer
 from machine import Pin, PWM  # type: ignore
 from lib.neotimer import Neotimer
@@ -17,6 +18,7 @@ def set_movement_by_ringtone(ringtone, motor):
 
 
 class Motor:
+    #TODO: run in seperate thread / core for better syncing
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
         self.left_pin = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
         self.right_pin = PWM(Pin(right_pin), pwm_freq, duty_u16=0)
@@ -166,8 +168,9 @@ class Alarm:
         print("alarm should go off now")
         self.locked = True
         self.is_active = True
+        config.display.wake()
         home.display_manager.display_timer.restart()
-        home.display_manager.set_active_state("home")
+        home.display_manager.set_active_state(aliases.home)
         home.motd_mode = "bounce"
         home.motd = alarm_message
         self.speaker.setVolume(volume)
