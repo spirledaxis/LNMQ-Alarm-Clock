@@ -24,7 +24,7 @@ class DisplayManager:
         print("called activiate state")
         for display_state in self.display_states:
             if display_state.name == name:
-                display_state.active
+                display_state.active = True
                 self.current_state = name
                 self.current_state_obj = display_state
             else:
