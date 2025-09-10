@@ -19,7 +19,7 @@ class Motor:
         self.timer = Neotimer(0)
         self.min_pwm = min_pwm
         self.max_pwm = 65535
-
+        self.repeat = False
        
 
     def _interact(self, cmd, speed_percent):
@@ -58,7 +58,8 @@ class Motor:
         if self.timer.finished():
             if self.movement_increment + 1 >= len(self.movement):
                 print("end of movement")
-                self.stop()
+                if not self.repeat:
+                    self.stop()
                 self.movement_increment = -1
 
             else:
