@@ -72,7 +72,7 @@ freedom_dive = [
     ('r', 516.003, 100),
 ]
 
-custom_movement = [
+default = [
     ('r', 400, 100),  # quick burst right at full speed
     ('l', 400, 100),  # quick burst left at full speed
     ('r', 300, 100),  # shorter burst right
@@ -124,13 +124,44 @@ eta = [
     ('l', 16000, 60)
 ]
 
+stay_with_me = [
+    ("w", 5416, 100),
+    ("r", 125, 100),
+    ("l", 417, 100),
+    ("r", 125, 100),
+    ("l", 1292, 100),
+    ("r", 2333, 100),
+    ("l", 1083, 100),
+    ("r", 1042, 100),
+    ("l", 2292, 100),
+    ("r", 1166, 100),
+    ("l", 1042, 100),
+    ("r", 4458, 100),
+    ("l", 250, 100),
+    ("r", 292, 100),
+    ("l", 250, 100),
+    ("r", 1417, 100),
+    ("l", 250, 100),
+    ("r", 291, 100),
+    ("l", 250, 100),
+    ("r", 1334, 100),
+    ("l", 2250, 100),
+    ("r", 1125, 100),
+    ("l", 1041, 100),
+]
+
+
 
 def set_movement_by_ringtone(ringtone, motor):
+    motor.repeat = False
     if ringtone == 13:
         motor.set_movement(freedom_dive)
     elif ringtone == 8:
         motor.set_movement(i_am_speed)
     elif ringtone == 19:
         motor.set_movement(eta)
+    elif ringtone == 17:
+        motor.set_movement(stay_with_me)
     else:
-        motor.set_movement(custom_movement)
+        motor.set_movement(default)
+        motor.repeat = True
