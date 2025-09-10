@@ -5,7 +5,7 @@ from movements import set_movement_by_ringtone
 import config
 import json
 from lib import timeutils
-
+from time import sleep_ms
 
 class SetAlarm(DisplayState):
     def __init__(self, display_manager, alarm, name):
@@ -114,10 +114,11 @@ class SetAlarm(DisplayState):
 
     def preview(self):
         if not config.speaker.queryBusy():
-            self.motor.ready = True
             set_movement_by_ringtone(self.ringtone_index, motor=self.motor)
             config.speaker.setVolume(self.volume)
             config.speaker.playTrack(1, self.ringtone_index)
+            sleep_ms(200)
+            self.motor.start()
         else:
             config.speaker.pause()
             self.motor.stop()
