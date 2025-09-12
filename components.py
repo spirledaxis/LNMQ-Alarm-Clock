@@ -7,7 +7,6 @@ from movements import set_movement_by_ringtone
 from utime import sleep_ms
 
 
-
 class Motor:
     #TODO: run in seperate thread / core for better syncing
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
@@ -118,6 +117,7 @@ class Alarm:
         self.locked = False  # used so we don't call fire for the entire minute
         self.motor = motor
         self.speaker = speaker
+        self.speaker_state_timer = Neotimer(1000)
         self.original_ringtone = self.ringtone
         set_movement_by_ringtone(self.ringtone, self.motor)
 
@@ -148,12 +148,14 @@ class Alarm:
             self.stop()
 
         if self.is_active:
-            if not self.speaker.queryBusy():
+            if not self.speaker.queryBusy() and self.speaker_state_timer.finished():
                 print("going at it again")
                 #self.motor.stop()  # stop the motor in the case that the movement is longer than the audio
                 # Can't use this because it introduces delay which cooks sync
-                self.motor.start()
                 self.speaker.playTrack(1, self.ringtone)
+                self.motor.start()
+                self.speaker_state_timer.restart()
+
             #self.motor.do_movement()
 
     def fire(self, now, home):
@@ -180,8 +182,10 @@ class Alarm:
         home.motd = alarm_message
         self.speaker.setVolume(volume)
         self.speaker.playTrack(1, self.ringtone)
-        # self.motor.set_movement(self.motor_movement)
+        self.motor.start()
+        set_movement_by_ringtone(self.ringtone, self.motor)
         self.timeout_timer.start()
+        self.speaker_state_timer.start()
 
     def stop(self):
         print("stopping...")

@@ -117,7 +117,6 @@ class SetAlarm(DisplayState):
             set_movement_by_ringtone(self.ringtone_index, motor=self.motor)
             config.speaker.setVolume(self.volume)
             config.speaker.playTrack(1, self.ringtone_index)
-            sleep_ms(200)
             self.motor.start()
         else:
             config.speaker.pause()

@@ -191,6 +191,9 @@ try:
     lock_ntptime = False
     config.display.set_contrast(0)
 
+    now = rtc.datetime()
+    myalarm.hour = now[4]
+    myalarm.minute = now[5]
     while True:
         start = time.ticks_ms()
         display_manager.run_current_state()
@@ -199,7 +202,6 @@ try:
         # webserver
         check = webserver.web_server(s, clients)
         if check is not None:
-            print("asifhjaf9iuohea")
             print(check)
             if check[0] == 'motd':
                 home.new_motds.append(check[1])
@@ -220,7 +222,7 @@ try:
         dur = display_manager.display_timer.get_remaining()
         done = display_manager.display_timer.finished()
         cycle_time = time.ticks_diff(time.ticks_ms(), start)
-        print(dur, done, cycle_time)
+        #print(dur, done, cycle_time)
 
         # ntp
         hour = now[4]
@@ -232,6 +234,7 @@ try:
 
         elif minute != 5:
             lock_ntptime = False
+    
 
 except Exception as e:
     config.speaker.cleanup()
