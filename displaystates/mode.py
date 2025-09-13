@@ -39,7 +39,6 @@ class DisplayManager:
         self.display_timer.start()
 
     def run_current_state(self):
-
         self.display.fill_rectangle(
             0, 0, self.display.width, self.display.height, True)
 
