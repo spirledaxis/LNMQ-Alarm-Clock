@@ -136,6 +136,7 @@ class Home(DisplayState):
                                self.motd, bally, rotate=180)
 
     def draw_icons(self):
+        now = self.rtc.datetime()
         if self.display_manager.switch.get_state():
             self.display.draw_sprite(self.bell_icon_fb, x=(
                 (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) + 4, w=8, h=8)
@@ -146,7 +147,7 @@ class Home(DisplayState):
         if self.usb_power.value() == 1:
             self.display.draw_sprite(self.plug_icon, x=(
                 (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
-        else:
+        elif now[6] % 2 == 0:
             self.display.draw_sprite(self.battery_icon, x=(
                 (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
 
