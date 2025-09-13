@@ -59,7 +59,13 @@ class MessageViewer(DisplayState):
             [0xfc, 0xf3, 0xef, 0x1e, 0x1e, 0xef, 0xf3, 0xfc])
         self.inverted_mail = make_icon(
             [0x00, 0x5e, 0x6e, 0x72, 0x72, 0x6e, 0x5e, 0x00])
-
+        
+        self.drift_range = 5
+        self.drift_positive = True
+        self.icon_drift_x = 0
+        self.icon_drift_y = 0
+        self.drift_timer = Neotimer(3000)
+        self.drift_timer.start()
     def on_fwd(self):
         self.home.read_msg()
         self.motd = self.home.motd
@@ -68,11 +74,17 @@ class MessageViewer(DisplayState):
         print("exiting the messenger")
         self.display_manager.set_active_state(aliases.home)
 
-    def drift(self, min, max):
-        return NotImplementedError("You need to actually apply the drifts...")
-        idk = range(min, max + 1)
-        offsets = [coord for coord in idk]
-        return random.choice(offsets)
+    def drift(self):
+        if self.drift_positive:
+            self.icon_drift_x += 1
+            self.icon_drift_y += 1
+        else:
+            self.icon_drift_x -= 1
+            self.icon_drift_y -= 1
+        
+        if abs(self.icon_drift_x) >= self.drift_range and abs(self.icon_drift_y) >= self.drift_range:
+            self.drift_positive = not self.drift_positive
+
 
     def draw_motd(self):
         motd_parts = self.motd.split(' ')
@@ -119,12 +131,11 @@ class MessageViewer(DisplayState):
 
         total_width = (num_icons * 8) + ((num_icons - 1) * (self.spacing - 8))
         start_x = (self.display.width - total_width) // 2
-
-        x = start_x
-        y = 1
-
+        x = start_x + self.icon_drift_x
+        y = 1 + abs(self.icon_drift_y) # abs because negatives would make the icons too low
+        padding = 3
         if self.invert:
-            #self.display.fill_rectangle(self.display.width-start_x-total_width-padding, y, total_width+2*padding, y+7, invert=False)
+            self.display.fill_rectangle(self.display.width-start_x+self.icon_drift_x-total_width-padding, y, total_width+2*padding, 8, invert=False)
             if self.display_manager.switch.get_state():
                 self.display.draw_sprite(
                     self.inverted_bell, x=x, y=y, w=8, h=8)
@@ -193,3 +204,9 @@ class MessageViewer(DisplayState):
             self.change_motd
             self.change_motd.restart()
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+        if self.drift_timer.finished():
+            print("drifting icons")
+            self.drift_timer.restart()
+            self.drift()
+
+
