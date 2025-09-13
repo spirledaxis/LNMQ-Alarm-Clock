@@ -150,6 +150,35 @@ stay_with_me = [
     ("l", 1041, 100),
 ]
 
+clash_royale = [
+    ("w", 2666, 100),
+    ("r", 1834, 100),
+    ("l", 458, 100),
+    ("r", 500, 100),
+    ("w", 3250, 100),
+    ("r", 458, 100),
+    ("w", 459, 100),
+    ("r", 1666, 100),
+    ("l", 417, 100),
+    ("r", 917, 100),
+    ("l", 1250, 100),
+    ("r", 1041, 100),
+    ("l", 459, 100),
+    ("r", 500, 100),
+    ("l", 1583, 100),
+    ("w", 1042, 100),
+    ("l", 1000, 100),
+    ("r", 1791, 100),
+    ("l", 334, 100),
+    ("r", 416, 100),
+    ("l", 917, 100),
+    ("w", 2083, 100),
+    ("l", 417, 100),
+    ("r", 1333, 100),
+    ("l", 375, 100),
+    ("r", 875, 100)
+]
+
 
 
 def set_movement_by_ringtone(ringtone, motor):
@@ -162,6 +191,8 @@ def set_movement_by_ringtone(ringtone, motor):
         motor.set_movement(eta)
     elif ringtone == 17:
         motor.set_movement(stay_with_me)
+    elif ringtone == 18:
+        motor.set_movement(clash_royale)
     else:
         motor.set_movement(default)
         motor.repeat = True
