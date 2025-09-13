@@ -59,13 +59,13 @@ class MessageViewer(DisplayState):
             [0xfc, 0xf3, 0xef, 0x1e, 0x1e, 0xef, 0xf3, 0xfc])
         self.inverted_mail = make_icon(
             [0x00, 0x5e, 0x6e, 0x72, 0x72, 0x6e, 0x5e, 0x00])
-        
+
         self.drift_range = 5
         self.drift_positive = True
-        self.icon_drift_x = 0
-        self.icon_drift_y = 0
-        self.drift_timer = Neotimer(3000)
+        self.drift_offset = 0
+        self.drift_timer = Neotimer(config.messenger_drift_inverval_ms)
         self.drift_timer.start()
+
     def on_fwd(self):
         self.home.read_msg()
         self.motd = self.home.motd
@@ -76,13 +76,12 @@ class MessageViewer(DisplayState):
 
     def drift(self):
         if self.drift_positive:
-            self.icon_drift_x += 1
-            self.icon_drift_y += 1
+            self.drift_offset += 1
+          
         else:
-            self.icon_drift_x -= 1
-            self.icon_drift_y -= 1
-        
-        if abs(self.icon_drift_x) >= self.drift_range and abs(self.icon_drift_y) >= self.drift_range:
+            self.drift_offset -= 1
+
+        if abs(self.drift_offset) >= self.drift_range:
             self.drift_positive = not self.drift_positive
 
 
@@ -114,15 +113,16 @@ class MessageViewer(DisplayState):
 
         num_lines = len(split_motd)
         text_y = (self.display.height // 2 - bally.height // 2) + \
-            bally.height // 2 * (num_lines - 1)
+            bally.height // 2 * (num_lines - 1) + self.drift_offset
 
         for part in split_motd:
             part_len = bally.measure_text(part)
-            text_x = self.display.width // 2 + part_len // 2
+            text_x = self.display.width // 2 + part_len // 2 + self.drift_offset
             self.display.draw_text(text_x, text_y, part, bally, rotate=180)
             text_y -= bally.height
 
     def draw_icons(self):
+        now = self.home.rtc.datetime()
         num_icons = 2
         if self.display_manager.switch.get_state():
             num_icons += 1
@@ -131,11 +131,13 @@ class MessageViewer(DisplayState):
 
         total_width = (num_icons * 8) + ((num_icons - 1) * (self.spacing - 8))
         start_x = (self.display.width - total_width) // 2
-        x = start_x + self.icon_drift_x
-        y = 1 + abs(self.icon_drift_y) # abs because negatives would make the icons too low
+        x = start_x + self.drift_offset
+        # abs because negatives would make the icons too low
+        y = 1 + abs(self.drift_offset)
         padding = 3
         if self.invert:
-            self.display.fill_rectangle(self.display.width-start_x+self.icon_drift_x-total_width-padding, y, total_width+2*padding, 8, invert=False)
+            self.display.fill_rectangle(self.display.width-start_x+self.drift_offset -
+                                        total_width-padding, y, total_width+2*padding, 8, invert=False)
             if self.display_manager.switch.get_state():
                 self.display.draw_sprite(
                     self.inverted_bell, x=x, y=y, w=8, h=8)
@@ -144,11 +146,11 @@ class MessageViewer(DisplayState):
             if self.usb_power.value() == 1:
                 self.display.draw_sprite(
                     self.inverted_plug, x=x, y=y, w=8, h=8)
-                x += self.spacing
-            else:
+
+            elif now[6] % 2 == 0:
                 self.display.draw_sprite(
                     self.inverted_battery, x=x, y=y, w=8, h=8)
-                x += self.spacing
+            x += self.spacing
 
             if network.WLAN(network.WLAN.IF_STA).isconnected():
                 self.display.draw_sprite(
@@ -174,11 +176,11 @@ class MessageViewer(DisplayState):
             if self.usb_power.value() == 1:
                 self.display.draw_sprite(
                     self.home.plug_icon, x=x, y=y, w=8, h=8)
-                x += self.spacing
-            else:
+
+            elif now[6] % 2 == 0:
                 self.display.draw_sprite(
                     self.home.battery_icon, x=x, y=y, w=8, h=8)
-                x += self.spacing
+            x += self.spacing
 
             if network.WLAN(network.WLAN.IF_STA).isconnected():
                 self.display.draw_sprite(
@@ -208,5 +210,3 @@ class MessageViewer(DisplayState):
             print("drifting icons")
             self.drift_timer.restart()
             self.drift()
-
-
