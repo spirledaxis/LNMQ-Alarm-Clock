@@ -156,7 +156,7 @@ class Alarm:
                 self.motor.start()
                 self.speaker_state_timer.restart()
 
-            #self.motor.do_movement()
+            #self.motor.do_movement() #moved to another thread
 
     def fire(self, now, home):
         if self.locked:
