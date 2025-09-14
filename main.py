@@ -151,7 +151,6 @@ booticon_warning = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x
 booticon_warning = framebuf.FrameBuffer(booticon_warning, 128, 64, framebuf.MONO_VLSB)
 
 def http_get(host, port, path):
-    host = '192.168.1.52'
     addr = socket.getaddrinfo(host, port)[0][-1]
     s = socket.socket()
     s.settimeout(15)
