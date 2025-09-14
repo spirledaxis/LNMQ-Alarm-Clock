@@ -107,7 +107,7 @@ def web_server(s, clients):
                             data['alarm_message'] = alarm_msg
 
                             with open('alarm.json', 'w') as f:
-                                json.dump([data], f)
+                                json.dump(data, f)
 
                         cl.send(b'HTTP/1.0 200 OK\r\n\r\nMotd Recieved')
                         cl.close()
