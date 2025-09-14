@@ -1,7 +1,7 @@
 from lib import timeutils
 from lib.neotimer import Neotimer
 import json
-
+from displaystates import aliases
 class Alarm:
     def __init__(self, timeout_s, motor, speaker, switch):
         """use military time for the hour. """
@@ -81,8 +81,7 @@ class Alarm:
         self.is_active = True
         home.display_manager.display.wake()
         home.display_manager.display_timer.restart()
-        #TODO: switch to alias, but cant import due to circulars
-        home.display_manager.set_active_state("home")
+        home.display_manager.set_active_state(aliases.home)
         home.motd_mode = "bounce"
         home.motd = alarm_message
         self.speaker.setVolume(volume)
