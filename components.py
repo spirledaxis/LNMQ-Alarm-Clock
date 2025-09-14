@@ -8,7 +8,6 @@ from utime import sleep_ms
 
 
 class Motor:
-    #TODO: run in seperate thread / core for better syncing
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
         self.left_pin = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
         self.right_pin = PWM(Pin(right_pin), pwm_freq, duty_u16=0)

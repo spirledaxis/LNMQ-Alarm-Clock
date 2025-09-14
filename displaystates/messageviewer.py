@@ -11,7 +11,6 @@ from displaystates import aliases
 
 
 class MessageViewer(DisplayState):
-    # TODO: add drift to stop burn in
     def __init__(self, display_manager, home, name):
 
         self.button_map = [
@@ -37,7 +36,7 @@ class MessageViewer(DisplayState):
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
         self.spacing = 4 + 8  # add 8 to compensate for the icons
         self.display_manager = display_manager
-        self.swap_icons = Neotimer(config.messenger_icon_cycle_time_s * 1000)
+        self.swap_icons = Neotimer(config.messenger_icon_invert_time_s * 1000)
         self.change_motd = Neotimer(config.messenger_cycle_time_s * 1000)
         self.swap_icons.start()
         self.change_motd.start()
@@ -69,6 +68,7 @@ class MessageViewer(DisplayState):
     def on_fwd(self):
         self.home.read_msg()
         self.motd = self.home.motd
+        self.change_motd.restart()
 
     def on_exit(self):
         print("exiting the messenger")
@@ -77,13 +77,12 @@ class MessageViewer(DisplayState):
     def drift(self):
         if self.drift_positive:
             self.drift_offset += 1
-          
+
         else:
             self.drift_offset -= 1
 
         if abs(self.drift_offset) >= self.drift_range:
             self.drift_positive = not self.drift_positive
-
 
     def draw_motd(self):
         motd_parts = self.motd.split(' ')

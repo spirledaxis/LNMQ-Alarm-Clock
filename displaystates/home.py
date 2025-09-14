@@ -80,9 +80,7 @@ class Home(DisplayState):
         time_len = timefont.measure_text(time_text)
 
         self.time_len = timefont.measure_text(time_text)
-        # TODO: 1 is tuesday, supposedely. Idk if the tuple is weird or my
-        # function is cooked, thats why theres +1 for now. Fix later.
-        date_text = f'{timeutils.daynum_to_daystr(day_name_int+1)} | {timeutils.monthnum_to_monthstr(month)} {month_day}'
+        date_text = f'{timeutils.daynum_to_daystr(day_name_int)} | {timeutils.monthnum_to_monthstr(month)} {month_day}'
         date_text_len = bally.measure_text(date_text)
         if date_text_len >= 128:
             date_text = f'{timeutils.daynum_to_daystr(day_name_int+1)} | {timeutils.monthnum_to_monthabbr(month)} {month_day}'
@@ -315,7 +313,6 @@ class Home(DisplayState):
             self.motd_mode = 'scroll'
 
         else:
-            # TODO: switch to urequests
             print("turning off light")
             host = config.server_ip
             path = '/toggle_light'
