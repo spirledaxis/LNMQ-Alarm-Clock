@@ -55,8 +55,4 @@ def select_random_motd(data):
     return motd
 
 
-if __name__ == '__main__':
-    data = fetch_data()
-    print(data)
-    results = id_search(data, 1)
-    print(results)
+

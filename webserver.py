@@ -123,8 +123,3 @@ def web_server(s, clients):
                 cl.close()
                 clients.remove(cl)
 
-
-if __name__ == '__main__':
-    a, b = web_setup()
-    while True:
-        web_server(a, b)

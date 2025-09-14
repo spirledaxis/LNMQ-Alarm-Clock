@@ -72,32 +72,4 @@ class DisplayState:
         self.display_manager = display_manager
 
 
-if __name__ == '__main__':
-    from displaystates import Home, DisplayOff, MessageViewer, SetAlarm
 
-    with open('motds.json', 'r') as f:
-        motds_data = json.load(f)
-    import config
-    from hardware import Switch, Motor
-    from alarm import Alarm
-    motor = Motor(config.motor_l, config.motor_r,
-                  config.motor_pwm_freq, config.motor_min_pwm)
-    switch = Switch(config.switch)
-    myalarm = Alarm(config.alarm_timeout_min * 60,
-                    motor, config.speaker, switch)
-    display_manager = DisplayManager()
-    home = Home(display_manager, myalarm, 'home')
-    alarm = SetAlarm(display_manager, myalarm, 'set_alarm')
-    off = DisplayOff(display_manager, 'display_off')
-    messenger = MessageViewer(display_manager, 'message_reader', home)
-    display_manager.display_states = [home, alarm, off, messenger]
-    display_manager.set_active_state(aliases.set_alarm)
-    print("running mode")
-    prev_dur = 0
-    while True:
-        display_manager.run_current_state()
-        dur = display_manager.display_timer.get_elapsed()
-        done = display_manager.display_timer.finished()
-        cycle_time = dur - prev_dur
-        prev_dur = dur
-        #print(config.display_timeout_min*60_000-dur, done, cycle_time)

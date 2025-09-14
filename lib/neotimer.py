@@ -118,13 +118,4 @@ class Neotimer:
             return False
 
 
-if __name__ == '__main__':
-    from utime import sleep_ms  # type: ignore
-    x = Neotimer(2000)
-    x.start()
 
-    while True:
-        sleep_ms(100)
-        if x.repeat_execution_times(3):
-            print("I repeat whenever the time ends!")
-        print(x.get_remaining())
