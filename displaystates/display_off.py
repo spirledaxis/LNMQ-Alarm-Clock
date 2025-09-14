@@ -1,5 +1,5 @@
 from displaystates import aliases
-from components import Button
+from hardware import Button
 import config
 import socket
 from displaystates.mode import DisplayState

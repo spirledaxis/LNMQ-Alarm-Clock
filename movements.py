@@ -181,18 +181,3 @@ clash_royale = [
 
 
 
-def set_movement_by_ringtone(ringtone, motor):
-    motor.repeat = False
-    if ringtone == 13:
-        motor.set_movement(freedom_dive)
-    elif ringtone == 8:
-        motor.set_movement(i_am_speed)
-    elif ringtone == 19:
-        motor.set_movement(eta)
-    elif ringtone == 17:
-        motor.set_movement(stay_with_me)
-    elif ringtone == 18:
-        motor.set_movement(clash_royale)
-    else:
-        motor.set_movement(default)
-        motor.repeat = True

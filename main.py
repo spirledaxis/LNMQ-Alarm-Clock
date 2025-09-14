@@ -1,21 +1,5 @@
-import time
-from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
-import errno
-from config import display
-import json
-from components import Alarm, Switch, Motor
-import movements
-import webserver
-import motd_parser
-from lib.neotimer import Neotimer
-from lib.ntptime import settime
-import lib.connect as connect
-import displaystates.mode as mode
-import socket
-from machine import RTC  # type: ignore
 import framebuf  # type: ignore
 import config
-import _thread
 booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0xc0, 0xc0, 0x40, 0xc0, 0xc0,
                       0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -83,9 +67,24 @@ booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 icon = framebuf.FrameBuffer(booticon, 128, 64, framebuf.MONO_VLSB)
 config.display.draw_sprite(icon, x=0, y=0, w=128, h=64)
 config.display.present()
+from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
+import errno
+from config import display
+import json
+from hardware import Switch, Motor
+from alarm import Alarm
+import webserver
+import motd_parser
+from lib.neotimer import Neotimer
+from lib.ntptime import settime
+import lib.connect as connect
+import displaystates.mode as mode
+import socket
+from machine import RTC  # type: ignore
+import _thread
+import time
 
 
-# TODO: switch to urequests
 
 def http_get(host, port, path):
     addr = socket.getaddrinfo(host, port)[0][-1]
@@ -159,7 +158,7 @@ try:
                 'motd']
 
             with open('alarm.json', 'w') as f:
-                json.dump([data], f)
+                json.dump(data, f)
     except OSError as e:
         if e.errno == errno.ETIMEDOUT:
             print("timed out")
@@ -191,9 +190,12 @@ try:
     lock_ntptime = False
     config.display.set_contrast(0)
 
+    # # alarm testing
     now = rtc.datetime()
-    myalarm.hour = now[4]
-    myalarm.minute = now[5]
+    # myalarm.hour = now[4]
+    # myalarm.minute = now[5]
+
+    print(now)
     while True:
         start = time.ticks_ms()
         display_manager.run_current_state()

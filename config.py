@@ -2,7 +2,7 @@ from machine import SPI, Pin  # type: ignore
 from lib.ssd1309 import Display
 from lib.picodfplayer import DFPlayer
 from lib.neotimer import Neotimer
-from components import Motor
+from hardware import Motor
 # motor
 motor_l = 19
 motor_r = 18
@@ -41,7 +41,7 @@ display = Display(spi, dc=Pin(dc), cs=Pin(cs), rst=Pin(res),
 
 # inputs
 snd_fx_l = 8  # these are also paired
-snd_fx_r = 2 # right wire fell off, idc enough to solder it on. Thus, use the left one
+snd_fx_r = 2  # right wire fell off, idc enough to solder it on. Thus, use the left one
 snze_l = 4  # the snze buttons seems to be paired
 snze_r = 3  # so, you can use either (but not both!)
 alm_set = 0
@@ -51,10 +51,11 @@ rev = 9
 switch = 6
 
 # timers
-display_timeout_min = 3
-display_messenger_timeout_min = 0.5
+display_timeout_min = 10
+display_messenger_timeout_min = 360
 messenger_cycle_time_s = 30
-messenger_icon_cycle_time_s = 10
+messenger_icon_invert_time_s = 10
+messenger_drift_inverval_ms = 15_000
 alarm_timeout_min = 5
 bsod_timeout_s = 15
 

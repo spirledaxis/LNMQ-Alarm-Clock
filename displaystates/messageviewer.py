@@ -1,5 +1,5 @@
 from displaystates.mode import DisplayState, timefont, bally
-from components import Button
+from hardware import Button
 import config
 import motd_parser
 from machine import Pin  # type: ignore

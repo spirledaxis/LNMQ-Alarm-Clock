@@ -1,5 +1,5 @@
 from displaystates import aliases
-from components import Switch
+from hardware import Switch
 import config
 from lib.xglcd_font import XglcdFont
 import json
@@ -78,8 +78,8 @@ if __name__ == '__main__':
     with open('motds.json', 'r') as f:
         motds_data = json.load(f)
     import config
-    from components import Alarm, Switch, Motor
-
+    from hardware import Switch, Motor
+    from alarm import Alarm
     motor = Motor(config.motor_l, config.motor_r,
                   config.motor_pwm_freq, config.motor_min_pwm)
     switch = Switch(config.switch)

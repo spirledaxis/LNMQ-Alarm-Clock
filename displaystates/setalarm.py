@@ -1,7 +1,6 @@
 from displaystates import aliases
 from displaystates.mode import DisplayState, timefont, bally
-from components import Button, RepeatButton
-from movements import set_movement_by_ringtone
+from hardware import Button, RepeatButton
 import config
 import json
 from lib import timeutils
@@ -114,7 +113,7 @@ class SetAlarm(DisplayState):
 
     def preview(self):
         if not config.speaker.queryBusy():
-            set_movement_by_ringtone(self.ringtone_index, motor=self.motor)
+            self.motor.set_movement_by_ringtone(self.ringtone_index)
             config.speaker.setVolume(self.volume)
             config.speaker.playTrack(1, self.ringtone_index)
             self.motor.start()
@@ -163,7 +162,7 @@ class SetAlarm(DisplayState):
         self.alarm.hour = timeutils.to_military_time(self.hour, self.ampm)
         self.alarm.minute = self.minute
         self.alarm.ringtone = self.ringtone_index
-        set_movement_by_ringtone(self.ringtone_index, self.alarm.motor)
+        self.motor.set_movement_by_ringtone(self.ringtone_index)
         self.display_manager.set_active_state(aliases.home)
         self.motor.ready = False
 

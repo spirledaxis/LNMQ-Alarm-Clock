@@ -1,5 +1,5 @@
 import config
-from components import Button
+from hardware import Button
 import json
 from machine import Pin, RTC  # type: ignore
 import framebuf  # type: ignore
