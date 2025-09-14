@@ -8,14 +8,13 @@ def daynum_to_daystr(daynum):
     elif daynum == 4:
         return 'thursday'
     elif daynum == 5:
-        return 'saturday'
-    elif daynum == 6:
-        return 'sunday'
-    elif daynum == 7:
         return 'friday'
+    elif daynum == 6:
+        return 'saturday'
+    elif daynum == 7:
+        return 'sunday'
     else:
         raise ValueError('Not a valid daynum, should be between 1-7')
-
 
 def monthnum_to_monthstr(monthnum):
     if monthnum == 1:
