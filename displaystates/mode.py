@@ -5,6 +5,7 @@ from lib.xglcd_font import XglcdFont
 import json
 from lib.neotimer import Neotimer
 from utime import ticks_ms  # type: ignore
+from machine import Pin #type: ignore
 
 timefont = XglcdFont('Proxy24x31.c', 24, 31)
 bally = XglcdFont('Bally7x9.c', 7, 9)
@@ -19,6 +20,8 @@ class DisplayManager:
         self.display_timer = Neotimer(config.display_timeout_min * 60_000)
         self.display_timer.start()
         self.switch = Switch(config.switch)
+        self.usb_power = Pin('WL_GPIO2', Pin.IN)
+        self.bat_lock = False
 
     def set_active_state(self, name):
         print("called activiate state")
@@ -29,12 +32,13 @@ class DisplayManager:
                 self.current_state_obj = display_state
             else:
                 display_state.active = False
-
+    
         if self.current_state_obj.name == 'message_reader':
             self.display_timer = Neotimer(
                 config.display_messenger_timeout_min * 60_000)
         else:
             self.display_timer = Neotimer(config.display_timeout_min * 60_000)
+        
 
         self.display_timer.start()
 
@@ -59,6 +63,21 @@ class DisplayManager:
             if button.pressed:
                 print("resetting display time via button press")
                 self.display_timer.restart()
+
+        if self.usb_power.value() == 0 and not self.bat_lock: 
+            self.bat_lock = True
+            self.display_timer = Neotimer(config.display_timeout_bat_s * 1000)
+            self.display_timer.start()
+
+        elif self.usb_power.value() == 1 and self.bat_lock:
+            self.bat_lock = False
+            if self.current_state_obj.name == 'message_reader':
+                self.display_timer = Neotimer(
+                    config.display_messenger_timeout_min * 60_000)
+            else:
+                self.display_timer = Neotimer(config.display_timeout_min * 60_000)
+
+            self.display_timer.start()
 
         self.switch.update()
 

@@ -53,6 +53,7 @@ switch = 6
 # timers
 display_timeout_min = 10
 display_messenger_timeout_min = 360
+display_timeout_bat_s = 10
 messenger_cycle_time_s = 30
 messenger_icon_invert_time_s = 10
 messenger_drift_inverval_ms = 15_000
