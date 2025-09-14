@@ -8,8 +8,8 @@ from utime import ticks_ms  # type: ignore
 from machine import Pin #type: ignore
 
 print("loading fonts...")
-timefont = XglcdFont('Proxy24x31.c', 24, 31)
-bally = XglcdFont('Bally7x9.c', 7, 9)
+timefont = XglcdFont('Proxy24x31.bin', 24, 31)
+bally = XglcdFont('Bally7x9.bin', 7, 9)
 
 prev_dur = 0
 

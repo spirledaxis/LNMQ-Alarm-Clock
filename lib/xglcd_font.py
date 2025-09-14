@@ -40,33 +40,14 @@ class XglcdFont(object):
         self.__load_xglcd_font(path)
 
     def __load_xglcd_font(self, path):
-        """Load X-GLCD font data from text file.
+        """Load X-GLCD font data from bin file.
 
         Args:
             path (string): Full path of font file.
         """
-        bytes_per_letter = self.bytes_per_letter
-        # Buffer to hold letter byte values
-        self.letters = bytearray(bytes_per_letter * self.letter_count)
-        mv = memoryview(self.letters)
-        offset = 0
-        with open(path, 'r') as f:
-            for line in f:
-                # Skip lines that do not start with hex values
-                line = line.strip()
-                if len(line) == 0 or line[0:2] != '0x':
-                    continue
-                # Remove comments
-                comment = line.find('//')
-                if comment != -1:
-                    line = line[0:comment].strip()
-                # Remove trailing commas
-                if line.endswith(','):
-                    line = line[0:len(line) - 1]
-                # Convert hex strings to bytearray and insert in to letters
-                mv[offset: offset + bytes_per_letter] = bytearray(
-                    int(b, 16) for b in line.split(','))
-                offset += bytes_per_letter
+        self.letters = bytearray(self.bytes_per_letter * self.letter_count)
+        with open(path, 'rb') as f:
+            f.readinto(self.letters)
 
     def get_letter(self, letter, invert=False, rotate=0):
         """Convert letter byte data to pixels.
