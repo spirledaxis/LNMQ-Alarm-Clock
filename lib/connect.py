@@ -12,7 +12,7 @@ def do_connect():
         while not sta_if.isconnected():
             pass
     print('network config:', sta_if.ipconfig('addr4'))
-
+    return sta_if
 
 def check_connection():
     sta_if = network.WLAN(network.WLAN.IF_STA)
