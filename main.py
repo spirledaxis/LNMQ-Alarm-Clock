@@ -1,21 +1,4 @@
-import time
-import _thread
-from machine import RTC  # type: ignore
-import socket
-import displaystates.mode as mode
-import lib.connect as connect
-from lib.ntptime import settime
-from lib.neotimer import Neotimer
-import motd_parser
-import webserver
-from alarm import Alarm
-from hardware import Switch, Motor
-import json
-from config import display
-import errno
-from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
-import framebuf  # type: ignore
-from machine import Pin #type: ignore
+import framebuf
 import config
 booticon_warning = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0xc0, 0xc0, 0x40, 0xc0, 0xc0,
@@ -85,6 +68,25 @@ booticon_warning = framebuf.FrameBuffer(
     booticon_warning, 128, 64, framebuf.MONO_VLSB)
 config.display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
 config.display.present()
+from machine import RTC  # type: ignore
+import time
+import _thread
+import socket
+import displaystates.mode as mode
+import lib.connect as connect
+from lib.ntptime import settime
+from lib.neotimer import Neotimer
+import motd_parser
+import webserver
+from alarm import Alarm
+from hardware import Switch, Motor
+import json
+from config import display
+import errno
+from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
+import framebuf  # type: ignore
+from machine import Pin #type: ignore
+
 
 booticon_warning = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0xc0, 0xc0, 0x40, 0xc0, 0xc0,
