@@ -58,7 +58,11 @@ messenger_icon_invert_time_s = 10
 messenger_drift_inverval_ms = 15_000
 alarm_timeout_min = 5
 bsod_timeout_s = 15
+blink_nowifi_ms = 200
 
 # ips
 server_ip = '192.168.1.21'
 server_port = 8080
+
+#other
+blink_wifi_max = 5

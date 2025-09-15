@@ -1,6 +1,7 @@
 import config
 from hardware import Button
 import json
+from lib.neotimer import Neotimer
 from machine import Pin, RTC  # type: ignore
 import framebuf  # type: ignore
 import network  # type: ignore
@@ -11,7 +12,7 @@ import motd_parser
 from displaystates.mode import DisplayState, timefont, bally
 import socket
 from displaystates import aliases
-
+import errno
 
 class Home(DisplayState):
     def __init__(self, display_manager, alarm, name):
@@ -66,6 +67,10 @@ class Home(DisplayState):
         self.mail_icon = make_icon(
             [0xff, 0xa1, 0x91, 0x8d, 0x8d, 0x91, 0xa1, 0xff])
 
+        self.blink_wifi_max = config.blink_wifi_max
+        self.blinked_wifi = 0
+        self.blink_wifi = False
+        self.blink_wifi_inverval = Neotimer(config.blink_nowifi_ms)
     def clock(self):
         now = self.rtc.datetime()
         month = now[1]
@@ -83,7 +88,7 @@ class Home(DisplayState):
         date_text = f'{timeutils.daynum_to_daystr(day_name_int)} | {timeutils.monthnum_to_monthstr(month)} {month_day}'
         date_text_len = bally.measure_text(date_text)
         if date_text_len >= 128:
-            date_text = f'{timeutils.daynum_to_daystr(day_name_int+1)} | {timeutils.monthnum_to_monthabbr(month)} {month_day}'
+            date_text = f'{timeutils.daynum_to_daystr(day_name_int)} | {timeutils.monthnum_to_monthabbr(month)} {month_day}'
             date_text_len = bally.measure_text(date_text)
 
         # origin is in the bottom right
@@ -152,10 +157,15 @@ class Home(DisplayState):
         if network.WLAN(network.WLAN.IF_STA).isconnected():
             self.display.draw_sprite(self.wifi_icon, x=(
                 (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
+        elif self.blink_wifi_inverval.repeat_execution() and self.blink_wifi:
+            self.blinked_wifi += 1
+            if self.blinked_wifi >= self.blink_wifi_max:
+                self.blinked_wifi = 0
+                self.blink_wifi = False
         else:
             self.display.draw_sprite(self.no_wifi_icon, x=(
                 (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
-
+            
         if len(self.new_motds) != 0:
             self.display.draw_sprite(self.mail_icon, x=(
                 (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8)
@@ -268,9 +278,13 @@ class Home(DisplayState):
             self.angle = 0
 
     def goto_alarm(self):
+        self.blink_wifi = False
+        self.blinked_wifi = 0
         self.display_manager.set_active_state(aliases.set_alarm)
 
     def off_display(self):
+        self.blink_wifi = False
+        self.blinked_wifi = 0
         self.display_manager.set_active_state(aliases.display_off)
 
     def read_msg(self):
@@ -314,17 +328,25 @@ class Home(DisplayState):
 
         else:
             print("turning off light")
-            host = config.server_ip
-            path = '/toggle_light'
-            addr = socket.getaddrinfo(host, config.server_port)[0][-1]
-            s = socket.socket()
-            s.connect(addr)
-            s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " +
-                   host.encode() + b"\r\nConnection: close\r\n\r\n")
-            s.close()
+            try:
+                host = config.server_ip
+                path = '/toggle_light'
+                addr = socket.getaddrinfo(host, config.server_port)[0][-1]
+                s = socket.socket()
+                s.connect(addr)
+                s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " +
+                    host.encode() + b"\r\nConnection: close\r\n\r\n")
+                s.close()
+            except OSError as e:
+                if e.errno == errno.EHOSTUNREACH:
+                    self.blink_wifi = True
+                else:
+                    raise
 
     def on_clk(self):
         print("switching state")
+        self.blink_wifi = False
+        self.blinked_wifi = 0
         self.display_manager.set_active_state(aliases.message_reader)
 
     def main(self):
@@ -336,3 +358,5 @@ class Home(DisplayState):
             self.scroll_motd()
         elif self.motd_mode == 'bounce':
             self.bounce_motd()
+
+            
