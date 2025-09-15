@@ -44,6 +44,8 @@ class SetAlarm(DisplayState):
         self.display_manager = display_manager
         self.motor = config.motor
         self.motor.ready = False
+        self.offsetx = self.display.width - 10 # offset from the left edge where things are drawn
+        self.ampm_offsetx = 10 #offset from the right edge, needs to be added to ampm len
 
     def on_fwd(self):
         if self.selection == 'minute':
@@ -171,26 +173,28 @@ class SetAlarm(DisplayState):
         self.selection = self.edit_options[self.edit_index]
 
     def display_alarm_time(self):
-        time_display = f"{self.hour}:{self.minute:02} {self.ampm}"
-        self.time_len = timefont.measure_text(time_display)
-        x = (self.display.width + self.time_len) // 2
+        time_display = f"{self.hour}:{self.minute:02}"
+
         y = self.display.height // 2 - timefont.height // 2
-        self.display.draw_text(x, y, time_display, timefont, rotate=180)
-
+        self.display.draw_text(self.offsetx, y, time_display, timefont, rotate=180)
+        if self.hour > 9:
+            self.ampm_offsetx = 0
+        else:
+            self.ampm_offsetx = 10
+            
+        self.display.draw_text(self.ampm_offsetx+timefont.measure_text(self.ampm), y, self.ampm, timefont, rotate=180)
     def display_ringtone(self):
-
         ringtone_text = f"{self.ringtone_index}. {self.ringtone_json[self.ringtone_index-1]['description']}"
 
-        self.display.draw_text((self.display.width + self.time_len) // 2, self.ringtone_y,
+        self.display.draw_text(self.offsetx, self.ringtone_y,
                                ringtone_text, bally, rotate=180)
 
         volume_percentage = round((self.volume / 30) * 100)
         volume_text = f"Volume: {volume_percentage}% ({self.volume})"
-        self.display.draw_text((self.display.width + self.time_len) //
-                               2, self.volume_y, volume_text, bally, rotate=180)
+        self.display.draw_text(self.offsetx, self.volume_y, volume_text, bally, rotate=180)
 
     def selection_line(self):
-        x = (self.display.width + self.time_len) // 2
+        x = self.offsetx
         y = self.display.height // 2 - timefont.height // 2
 
         hour = str(self.hour)
@@ -209,16 +213,15 @@ class SetAlarm(DisplayState):
                 x - hour_len - colon_len - minute_len, y - 3, minute_len)
 
         elif self.selection == 'ampm':
-            self.display.draw_hline(
-                x - hour_len - colon_len - minute_len - space_len - ampm_len, y - 3, ampm_len)
+            self.display.draw_hline(self.ampm_offsetx, y - 3, ampm_len)
 
         elif self.selection == 'ringtone':
             self.display.draw_vline(
-                (self.display.width + self.time_len) // 2, self.ringtone_y, bally.height)
+                self.offsetx, self.ringtone_y, bally.height)
 
         elif self.selection == 'volume':
             self.display.draw_vline(
-                (self.display.width + self.time_len) // 2, self.volume_y, bally.height
+                self.offsetx, self.volume_y, bally.height
             )
 
     def main(self):
