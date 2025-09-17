@@ -1,7 +1,7 @@
 # Intro and motivation
 
 This project modified this alarm clock, giving it a large oled display and Wi-Fi. The initial motivation for this project was to get myself into the world of microcontrollers and circuits, along with adding NTP time as this clock is quite old, and its timekeeping started to drift noticeably. Furthermore, this alarm clock is quite interesting, and I wanted to give it a new life with modern upgrades. ![screenshot](images/IMG_9452.jpg)
-Note: for better cable management, I mounted the screen upside down. Thus, the display codes assumes the origin in the bottom right corner, and has rotate=180 everywhere.
+Note: for better cable management, I mounted the screen upside down. Thus, the display code assumes the origin in the bottom right corner, and has rotate=180 everywhere.
 # Features
 
 -   NTP time with automatic daylights savings adjustment
