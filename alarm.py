@@ -2,6 +2,7 @@ from lib import timeutils
 from lib.neotimer import Neotimer
 import json
 from displaystates import aliases
+import motd_parser
 class Alarm:
     def __init__(self, timeout_s, motor, speaker, switch):
         """use military time for the hour. """
@@ -51,6 +52,8 @@ class Alarm:
             print("timeout reached")
             self.timeout_timer.reset()
             self.stop()
+            home.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+            home.motd_mode = 'scroll'
 
         if self.is_active:
             if not self.speaker.queryBusy() and self.speaker_state_timer.finished():
