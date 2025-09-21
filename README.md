@@ -77,7 +77,7 @@ The alarm clock appeared to have a ton of space on the inside, but there are ‘
 
 ### 3d Printing
 
-I was very against 3d printing stuff for this project. I don’t have much experience with 3d modeling, and I didn’t want to do multiple iterations in case I measured wrong and the part doesn’t fit.
+I was very against 3d printing stuff for this project. I don’t have much experience with 3d modeling, and I didn’t want to do multiple iterations in case I measured wrong and the part doesn’t fit. Also, I don't have a 3d printer.
 
 ### General Construction
 
