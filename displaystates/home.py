@@ -20,6 +20,7 @@ class Home(DisplayState):
             Button(config.alm_set, self.goto_alarm),
             Button(config.snze_l, self.on_snze),
             Button(config.fwd, self.read_msg),
+            Button(config.rev, self.on_rev),
             Button(config.snd_fx_l, self.off_display),
             Button(config.clk_set, self.on_clk)
         ]
@@ -106,6 +107,16 @@ class Home(DisplayState):
         self.display.draw_hline(127 - len_line, 63, len_line)
         self.display.draw_hline(127 - len_line, 62, len_line)
 
+    def on_rev(self):
+        if self.motd_mode == 'scroll':
+            with open('alarm.json', 'r') as f:
+                data = json.load(f)
+                self.motd = data['alarm_message']
+                self.motd_mode = 'bounce'
+        elif self.motd_mode == 'bounce':
+            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+            self.motd_mode = 'scroll'
+            
     def scroll_motd(self):
         motd_len = bally.measure_text(self.motd)
         if self.motd_pos >= motd_len + self.display.width + 10:
