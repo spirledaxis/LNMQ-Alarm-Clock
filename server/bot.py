@@ -6,6 +6,103 @@ import re
 import textwrap
 import time
 import json
+char_lens = { #based on Bally7x9
+    ' ': 5,
+    '!': 5,
+    '"': 6,
+    '#': 7,
+    '$': 7,
+    '%': 7,
+    '&': 7,
+    "'": 5,
+    '(': 5,
+    ')': 6,
+    '*': 7,
+    '+': 7,
+    ',': 4,
+    '-': 7,
+    '.': 4,
+    '/': 7,
+    '0': 7,
+    '1': 6,
+    '2': 7,
+    '3': 7,
+    '4': 7,
+    '5': 7,
+    '6': 7,
+    '7': 7,
+    '8': 7,
+    '9': 7,
+    ':': 5,
+    ';': 5,
+    '<': 6,
+    '=': 7,
+    '>': 7,
+    '?': 7,
+    '@': 7,
+    'A': 7,
+    'B': 7,
+    'C': 7,
+    'D': 7,
+    'E': 7,
+    'F': 7,
+    'G': 7,
+    'H': 7,
+    'I': 6,
+    'J': 7,
+    'K': 7,
+    'L': 7,
+    'M': 7,
+    'N': 7,
+    'O': 7,
+    'P': 7,
+    'Q': 7,
+    'R': 7,
+    'S': 7,
+    'T': 7,
+    'U': 7,
+    'V': 7,
+    'W': 7,
+    'X': 7,
+    'Y': 7,
+    'Z': 7,
+    '[': 5,
+    '\\': 7,
+    ']': 7,
+    '^': 7,
+    '_': 7,
+    '`': 5,
+    'a': 7,
+    'b': 7,
+    'c': 7,
+    'd': 7,
+    'e': 7,
+    'f': 7,
+    'g': 7,
+    'h': 7,
+    'i': 6,
+    'j': 6,
+    'k': 6,
+    'l': 6,
+    'm': 7,
+    'n': 7,
+    'o': 7,
+    'p': 7,
+    'q': 7,
+    'r': 7,
+    's': 7,
+    't': 7,
+    'u': 7,
+    'v': 7,
+    'w': 7,
+    'x': 7,
+    'y': 7,
+    'z': 7,
+    '{': 7,
+    '|': 5,
+    '}': 7,
+    '~': 7,
+}
 servers = [
     1120883193063677972,
     1403077958943506612,
@@ -139,8 +236,11 @@ async def send_message(ctx: SlashContext, message: str, show_name=True):
                scopes=servers)
 @slash_option(name='message', description='',
               opt_type=OptionType.STRING, required=True)
+@slash_option(name='onscreen_check', 
+              description='rejects message if longer than display can show without scrolling',
+              opt_type=OptionType.BOOLEAN)
 @check(is_owner())
-async def set_alarm_message(ctx: SlashContext, message):
+async def set_alarm_message(ctx: SlashContext, message, onscreen_check=True):
     await ctx.defer()
 
     message = message.strip()
@@ -174,7 +274,21 @@ async def set_alarm_message(ctx: SlashContext, message):
         )
         await ctx.send(embed=embed)
         return
-
+    
+    if onscreen_check:
+        message_len_px = 0
+        for char in list(message):
+            message_len_px += char_lens[char] + 1
+        
+        if message_len_px > 128:
+            embed = interactions.Embed(
+            title="Offscreen",
+            description="This message will require scrolling. Set noscroll to false if you want a longer message.",
+            color=BrandColors.YELLOW
+        )
+            await ctx.send(embed=embed)
+            return
+    
     if len(message) > 100:
         embed = interactions.Embed(
             title="Too long",
