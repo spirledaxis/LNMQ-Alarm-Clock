@@ -1,6 +1,6 @@
 import framebuf
 import config
-booticon_warning = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+booticon = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0xc0, 0xc0, 0x40, 0xc0, 0xc0,
                               0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -64,9 +64,9 @@ booticon_warning = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-booticon_warning = framebuf.FrameBuffer(
-    booticon_warning, 128, 64, framebuf.MONO_VLSB)
-config.display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
+booticon = framebuf.FrameBuffer(
+    booticon, 128, 64, framebuf.MONO_VLSB)
+config.display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
 config.display.present()
 from machine import RTC  # type: ignore
 import time
@@ -180,14 +180,7 @@ def http_get(host, port, path):
     finally:
         s.close()
 
-
-try:
-    with open(f'alarm.json', 'r') as f:
-        print(f.read())
-    
-    wifi = connect.do_connect()
-    settime()
-
+def cache_stuff():
     with open('motds.json', 'r') as f:
         motds = json.load(f)
     try:
@@ -242,11 +235,12 @@ try:
             print("timed out while getting alarm message")
         else:
             raise
-
+try:
+    wifi = connect.do_connect()
+    settime()
+    cache_stuff()
     s, clients = webserver.web_setup()
     rtc = RTC()
-
-
 
     switch = Switch(config.switch)
 
@@ -278,7 +272,7 @@ try:
     if usb_power.value() == 0:
         wifi.disconnect()
         wifi.active(False)
-
+    
     while True:
         start = time.ticks_ms()
         display_manager.run_current_state()
@@ -294,11 +288,11 @@ try:
                 with open('alarm.json', 'r') as f:
                     data = json.load(f)
 
-                data['alarm_message'] = motd_parser.select_random_motd(motds)[
+                data['alarm_message'] = motd_parser.select_random_motd(home.motds_data)[
                     'motd']
 
                 with open('alarm.json', 'w') as f:
-                    json.dump([data], f)
+                    json.dump(data, f)
 
         # handle alarm
         myalarm.update(now, home)
@@ -316,10 +310,11 @@ try:
             lock_ntptime = True
             try:
                 settime()
+                cache_stuff()
             except Exception:
-                print("couldn't set the time")
+                print("couldn't set the time and/or fetch cache")
             else:
-                print("setting time via ntp...")
+                print("setting time via ntp and fetching cache")
             
         elif minute != 5:
             lock_ntptime = False
