@@ -9,7 +9,7 @@ import lib.timeutils as timeutils
 import math
 import random
 import motd_parser
-from displaystates.mode import DisplayState, timefont, bally
+from displaystates.mode import DisplayState, timefont, bally, bally_mini
 import socket
 from displaystates import aliases
 import errno
@@ -78,6 +78,14 @@ class Home(DisplayState):
         self.blink_wifi_inverval = Neotimer(config.blink_nowifi_ms)
 
         self.looptime = 0
+        self.offset_val = -6
+        self.offset = 0
+        self.apply_offset = False
+
+        self.iconactive_bell = False
+        self.iconactive_wifi = False
+        self.iconactive_battery = False
+        self.iconactive_mail = False
 
     def clock(self):
         now = self.rtc.datetime()
@@ -102,7 +110,7 @@ class Home(DisplayState):
         # origin is in the bottom right
 
         # Display the time
-        self.display.draw_text((self.display.width + time_len) // 2, self.display.height // 2 - timefont.height // 2,
+        self.display.draw_text((self.display.width + time_len) // 2 + self.offset, self.display.height // 2 - timefont.height // 2,
                                time_text, timefont, rotate=180)
 
         # display weekday, month, and mday
@@ -116,34 +124,40 @@ class Home(DisplayState):
 
     def draw_looptime(self):
         # A constant is used in the x so it doesn't jitter
-        self.display.draw_text((self.display.width + self.time_len)//2 + 21, self.display.height // 2 + timefont.height // 2 - bally.height,
-                               f'{self.looptime}', bally, rotate=180)
+        self.display.draw_text((self.display.width + self.time_len)//2 + 18 + self.offset, (self.display.height + timefont.height)//2 - bally_mini.height - 3,
+                               f'{self.looptime}', bally_mini, rotate=180)
 
     def draw_estimated_sleep(self):
         now = self.rtc.datetime()
         curr_hour = now[4]
         curr_minute = now[5]
-        curr_second = now[6]
 
-        # Convert current time and alarm time to total seconds since midnight
-        now_seconds = curr_hour * 3600 + curr_minute * 60 + curr_second
-        alarm_seconds = self.alarm.hour * 3600 + self.alarm.minute * 60
+        alarm_hour = self.alarm.hour
+        alarm_minute = self.alarm.minute
 
-        # If alarm is earlier than now, assume next day
-        if alarm_seconds <= now_seconds:
-            alarm_seconds += 24 * 3600
+        # Calculate hours and minutes until alarm
+        hours = alarm_hour - curr_hour
+        minutes = alarm_minute - curr_minute - config.sleep_offset_min
 
-        # Difference in seconds
-        sleep_seconds = alarm_seconds - now_seconds - config.sleep_offset_min * 60
-        hours = sleep_seconds // 3600
-        minutes = (sleep_seconds % 3600) // 60 + 1
+        # Adjust if minutes are negative
+        if minutes < 0:
+            minutes += 60
+            hours -= 1
+
+        # Adjust if hours are negative (alarm is on the next day)
+        if hours < 0:
+            hours += 24
+
         disp_str = f'{hours}:{minutes:02}'
         x = (self.display.width + self.time_len)//2 + \
-            bally.measure_text(disp_str)
-        y = self.display.height // 2 - timefont.height // 2
-        if hours <= 8 or True:
-            self.display.draw_text(x, y, disp_str, bally, rotate=180)
-            self.display.draw_sprite(self.sleep_icon, x+3, y+1, 7, 7)
+            bally_mini.measure_text(disp_str) + self.offset
+        y = self.display.height // 2 - timefont.height // 2 + bally_mini.height//2 + 2
+        if (hours <= 8 and minutes <= 30) or hours <= 7:
+            self.apply_offset = True
+            self.display.draw_text(x, y, disp_str, bally_mini, rotate=180)
+            self.display.draw_sprite(self.sleep_icon, x+2, y+1, 7, 7)
+        else:
+            self.apply_offset = False
 
     def on_rev(self):
         if self.motd_mode == 'scroll':
@@ -189,38 +203,41 @@ class Home(DisplayState):
 
     def draw_icons(self):
         now = self.rtc.datetime()
+        x1 = ((self.display.width - self.time_len) // 4) + 4 + self.offset
+        x2 = ((self.display.width - self.time_len) // 4) - 8 + self.offset
+
         if self.display_manager.switch.get_state():
-            self.display.draw_sprite(self.bell_icon_fb, x=(
-                (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) + 4, w=8, h=8)
+            self.iconactive_bell = True
+            self.display.draw_sprite(self.bell_icon_fb, x=x1, y=(self.display.height // 2) + 4, w=8, h=8)
         else:
-            self.display.fill_rectangle(x=((self.display.width - self.time_len) // 4) - 4, y=(
-                self.display.height // 2) + 4, w=8, h=8, invert=True)
+            self.iconactive_bell = False
+            self.display.fill_rectangle(x=x1 - 8, y=(self.display.height // 2) + 4 + self.offset, w=8, h=8, invert=True)
 
         if self.usb_power.value() == 1:
-            self.display.draw_sprite(self.plug_icon, x=(
-                (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
+            self.iconactive_battery = False
+            self.display.draw_sprite(self.plug_icon, x=x1, y=(self.display.height // 2) - 8, w=8, h=8)
         elif now[6] % 2 == 0:
-            self.display.draw_sprite(self.battery_icon, x=(
-                (self.display.width - self.time_len) // 4) + 4, y=(self.display.height // 2) - 8, w=8, h=8)
+            self.iconactive_battery = True
+            self.display.draw_sprite(self.battery_icon, x=x1, y=(self.display.height // 2) - 8, w=8, h=8)
 
         if network.WLAN(network.WLAN.IF_STA).isconnected():
-            self.display.draw_sprite(self.wifi_icon, x=(
-                (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
+            self.iconactive_wifi = True
+            self.display.draw_sprite(self.wifi_icon, x=x2, y=(self.display.height // 2) + 4, w=8, h=8)
         elif self.blink_wifi_inverval.repeat_execution() and self.blink_wifi:
             self.blinked_wifi += 1
             if self.blinked_wifi >= self.blink_wifi_max:
                 self.blinked_wifi = 0
                 self.blink_wifi = False
         else:
-            self.display.draw_sprite(self.no_wifi_icon, x=(
-                (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
+            self.iconactive_wifi = False
+            self.display.draw_sprite(self.no_wifi_icon, x=x2, y=(self.display.height // 2) + 4, w=8, h=8)
 
         if len(self.new_motds) != 0:
-            self.display.draw_sprite(self.mail_icon, x=(
-                (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8)
+            self.iconactive_mail = True
+            self.display.draw_sprite(self.mail_icon, x=x2, y=(self.display.height // 2) - 8, w=8, h=8)
         else:
-            self.display.fill_rectangle(x=((self.display.width - self.time_len) // 4) - 8, y=(
-                self.display.height // 2) - 8, w=8, h=8, invert=True)
+            self.iconactive_mail = False
+            self.display.fill_rectangle(x=x2, y=(self.display.height // 2) - 8, w=8, h=8, invert=True)
 
     def draw_cube(self):
         # Function to multiply two matrices
@@ -401,16 +418,19 @@ class Home(DisplayState):
     def main(self):
         # self.draw_cube()
         self.clock()
+        self.draw_estimated_sleep()
         self.draw_icons()
         self.draw_looptime()
         if self.motd_mode == 'scroll':
             self.scroll_motd()
         elif self.motd_mode == 'bounce':
             self.bounce_motd()
-
-        self.draw_estimated_sleep()
-
-
+        
+        if self.apply_offset:
+            self.offset = self.offset_val
+        else:
+            self.offset = 0
+        
 if __name__ == '__main__':
     from displaystates import mode
 
