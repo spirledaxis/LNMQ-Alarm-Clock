@@ -13,6 +13,8 @@ from displaystates.mode import DisplayState, timefont, bally
 import socket
 from displaystates import aliases
 import errno
+import time
+
 
 class Home(DisplayState):
     def __init__(self, display_manager, alarm, name):
@@ -51,9 +53,9 @@ class Home(DisplayState):
         self.size = 15
         self.time_len = 0
 
-        def make_icon(data):
+        def make_icon(data, x=8, y=8):
             return framebuf.FrameBuffer(
-                bytearray(data), 8, 8, framebuf.MONO_VLSB)
+                bytearray(data), x, y, framebuf.MONO_VLSB)
 
         self.bell_icon_fb = make_icon(
             [0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
@@ -67,11 +69,16 @@ class Home(DisplayState):
             [0x00, 0xff, 0x00, 0x3f, 0x00, 0xaf, 0x40, 0xa3])
         self.mail_icon = make_icon(
             [0xff, 0xa1, 0x91, 0x8d, 0x8d, 0x91, 0xa1, 0xff])
+        self.sleep_icon = make_icon(
+            [0x40, 0x20, 0x42, 0x05, 0x42, 0x20, 0x40], 7, 7)
 
         self.blink_wifi_max = config.blink_wifi_max
         self.blinked_wifi = 0
         self.blink_wifi = False
         self.blink_wifi_inverval = Neotimer(config.blink_nowifi_ms)
+
+        self.looptime = 0
+
     def clock(self):
         now = self.rtc.datetime()
         month = now[1]
@@ -107,6 +114,37 @@ class Home(DisplayState):
         self.display.draw_hline(127 - len_line, 63, len_line)
         self.display.draw_hline(127 - len_line, 62, len_line)
 
+    def draw_looptime(self):
+        # A constant is used in the x so it doesn't jitter
+        self.display.draw_text((self.display.width + self.time_len)//2 + 21, self.display.height // 2 + timefont.height // 2 - bally.height,
+                               f'{self.looptime}', bally, rotate=180)
+
+    def draw_estimated_sleep(self):
+        now = self.rtc.datetime()
+        curr_hour = now[4]
+        curr_minute = now[5]
+        curr_second = now[6]
+
+        # Convert current time and alarm time to total seconds since midnight
+        now_seconds = curr_hour * 3600 + curr_minute * 60 + curr_second
+        alarm_seconds = self.alarm.hour * 3600 + self.alarm.minute * 60
+
+        # If alarm is earlier than now, assume next day
+        if alarm_seconds <= now_seconds:
+            alarm_seconds += 24 * 3600
+
+        # Difference in seconds
+        sleep_seconds = alarm_seconds - now_seconds - config.sleep_offset_min * 60
+        hours = sleep_seconds // 3600
+        minutes = (sleep_seconds % 3600) // 60 + 1
+        disp_str = f'{hours}:{minutes:02}'
+        x = (self.display.width + self.time_len)//2 + \
+            bally.measure_text(disp_str)
+        y = self.display.height // 2 - timefont.height // 2
+        if hours <= 8 or True:
+            self.display.draw_text(x, y, disp_str, bally, rotate=180)
+            self.display.draw_sprite(self.sleep_icon, x+3, y+1, 7, 7)
+
     def on_rev(self):
         if self.motd_mode == 'scroll':
             with open('alarm.json', 'r') as f:
@@ -116,7 +154,7 @@ class Home(DisplayState):
         elif self.motd_mode == 'bounce':
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
             self.motd_mode = 'scroll'
-            
+
     def scroll_motd(self):
         motd_len = bally.measure_text(self.motd)
         if self.motd_pos >= motd_len + self.display.width + 10:
@@ -176,7 +214,7 @@ class Home(DisplayState):
         else:
             self.display.draw_sprite(self.no_wifi_icon, x=(
                 (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) + 4, w=8, h=8)
-            
+
         if len(self.new_motds) != 0:
             self.display.draw_sprite(self.mail_icon, x=(
                 (self.display.width - self.time_len) // 4) - 8, y=(self.display.height // 2) - 8, w=8, h=8)
@@ -346,7 +384,7 @@ class Home(DisplayState):
                 s = socket.socket()
                 s.connect(addr)
                 s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " +
-                    host.encode() + b"\r\nConnection: close\r\n\r\n")
+                       host.encode() + b"\r\nConnection: close\r\n\r\n")
                 s.close()
             except OSError as e:
                 if e.errno == errno.EHOSTUNREACH:
@@ -364,10 +402,26 @@ class Home(DisplayState):
         # self.draw_cube()
         self.clock()
         self.draw_icons()
-
+        self.draw_looptime()
         if self.motd_mode == 'scroll':
             self.scroll_motd()
         elif self.motd_mode == 'bounce':
             self.bounce_motd()
 
-            
+        self.draw_estimated_sleep()
+
+
+if __name__ == '__main__':
+    from displaystates import mode
+
+    from alarm import Alarm
+    displaymanager = mode.DisplayManager()
+    from config import motor, speaker, switch
+    from hardware import Switch
+    switch = Switch(switch)
+    alarm = Alarm(60, motor, speaker, switch)
+    home = Home(displaymanager, alarm, "test")
+    displaymanager.display_states = [home]
+    displaymanager.set_active_state("test")
+    while True:
+        displaymanager.run_current_state()
