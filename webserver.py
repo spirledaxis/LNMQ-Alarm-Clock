@@ -19,7 +19,7 @@ def web_setup():
 # welcome to indentation hell
 
 
-def web_server(s, clients):
+def web_server(s, clients, status):
     # Check for new incoming connections
     rlist, _, _ = select.select([s], [], [], 0)
     for server_sock in rlist:
@@ -92,7 +92,13 @@ def web_server(s, clients):
                     cl.send(response_body)
                     cl.close()
                     continue
-
+                if 'GET /status.json' in request:
+                    cl.send(
+                        'HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n')
+                    cl.send(status)
+                    cl.close()
+                    continue
+                
                 if 'GET /?alarm_msg=' in request:
                     query = request.split('GET /?')[1].split(' ')[0]
                     params = query.split('&')
