@@ -83,6 +83,18 @@ try:
             time.sleep(0.1)
             cl.close()
 
+        elif 'GET /?error=' in request:
+            query = request.split('GET /?')[1].split(' ')[0]
+            query = query.split('=')[1].replace('+', ' ')
+            t = time.strftime("%m/%d/%Y %I:%M %p")
+            with open('errors.txt', 'a') as f:
+                f.write(f'{query}@ {t}\n')
+
+            cl.send(b'HTTP/1.0 200 OK\r\n\r\nError recieved')
+            time.sleep(0.1)
+            cl.close()
+                
+            
         elif 'GET /fetch_cache' in request:
             with open('motds_cache.json', 'r') as f:
                 body = f.read()
