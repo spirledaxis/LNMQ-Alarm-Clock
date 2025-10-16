@@ -8,6 +8,7 @@ from movements import *
 
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
+        "cmd sytax: ('dir', time_ms, %speed)"
         self.left_pin = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
         self.right_pin = PWM(Pin(right_pin), pwm_freq, duty_u16=0)
         self.is_idle = True
@@ -66,11 +67,10 @@ class Motor:
                 self.timer.start()
                 self._interact(cmd, speed)
 
-    def motor_thread(self):
-        while True:
-            if self.ready:
-                self.do_movement()
-                sleep_ms(5)  # fine-grained updates
+    def motor_thread_step(self):
+        if self.ready:
+            self.do_movement()
+            sleep_ms(5)  # fine-grained updates
        
 
     def movement_len_ms(self, movement):
@@ -112,7 +112,53 @@ class Motor:
             self.set_movement(default)
             self.repeat = True
 
+class HeadLights:
+    def __init__(self, left_pin, right_pin, pwm_freq, max_brightness=1):
+        "cmd syntax: ('light', effect, dur)"
+        self.left_light = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
+        self.right_light = PWM(Pin(right_pin), pwm_freq, duty_u16=0)
+        self.max_brightness = max_brightness
+        self.stop()
 
+    def stop(self):
+        self.ready = False
+        self.pulse_pattern = None
+        self.increment = 1
+        self.max_increment = -1
+        self.timer = Neotimer(0)
+        self.timer.finished = True
+    def headlight_thread_step(self):
+        if self.ready:
+            self._run_pattern()
+            sleep_ms(5)
+
+    def start(self, ringtone):
+        self.ready = True
+        self._set_pulse_pattern_by_ringtone(ringtone)
+
+    def _set_pulse_pattern_by_ringtone(self, ringtone):
+        with open(f"pulsepattern{ringtone}.json", 'r') as f:
+            self.pulse_pattern = json.load(f)
+            self.max_increment = len(self.pulse_pattern)
+
+    def _run_pattern(self):
+        if self.increment > self.max_increment:
+            self.stop()
+
+        if self.timer.finished():
+            waitfor = self.pulse_pattern[self.increment][0] - self.pulse_pattern[self.increment-1][0]
+            strength = self.pulse_pattern[self.increment-1][1]
+            if strength > self.max_brightness:
+                strength = self.max_brightness
+
+            self.left_light.duty_u16(int(strength * 65535))
+            self.right_light.duty_u16(int(strength * 65535))
+            self.increment += 1
+            self.timer = Neotimer(waitfor)
+            self.timer.start()
+
+
+    
 class Button:
     def __init__(self, pin, callback, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)

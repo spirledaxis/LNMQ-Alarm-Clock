@@ -2,7 +2,7 @@ from machine import SPI, Pin  # type: ignore
 from lib.ssd1309 import Display
 from lib.picodfplayer import DFPlayer
 from lib.neotimer import Neotimer
-from hardware import Motor
+from hardware import Motor, HeadLights
 # motor
 motor_l = 19
 motor_r = 18
@@ -10,6 +10,12 @@ motor_pwm_freq = 20_000
 motor_min_pwm = 37_000
 motor = Motor(motor_l, motor_r, motor_pwm_freq, motor_min_pwm)
 
+#headlights
+headlight_l = 1
+headlight_r = 1
+headlights_pwm_freq = 1000
+max_brightness = 0.5 #value from 0 to 1
+headlights = HeadLights(headlight_l, headlight_r, headlights_pwm_freq, max_brightness)
 # dfplayer
 rx = 17
 tx = 16
@@ -66,3 +72,4 @@ server_port = 8080
 
 #other
 blink_wifi_max = 5
+sleep_offset_min = 20
