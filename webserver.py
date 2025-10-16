@@ -53,8 +53,8 @@ def web_server(s, clients, status):
                             author = p.split('=')[1].replace(
                                 '+', ' ').replace('%20', ' ')
 
+                    motd = motd.replace('%3D', '=')
                     print(f"New data: {motd}, {author}")
-
                     with open('motds.json', 'r') as f:
                         data = json.load(f)
                         print(data)
