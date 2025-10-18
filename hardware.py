@@ -6,6 +6,7 @@ from lib import timeutils
 from utime import sleep_ms
 from movements import *
 
+
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
         "cmd sytax: ('dir', time_ms, %speed)"
@@ -18,7 +19,6 @@ class Motor:
         self.min_pwm = min_pwm
         self.max_pwm = 65535
         self.repeat = False
-       
 
     def _interact(self, cmd, speed_percent):
         # speed to duty cycle (speed param is percentage)
@@ -70,8 +70,6 @@ class Motor:
     def motor_thread_step(self):
         if self.ready:
             self.do_movement()
-            sleep_ms(5)  # fine-grained updates
-       
 
     def movement_len_ms(self, movement):
         time_ms = 0
@@ -79,7 +77,6 @@ class Motor:
             time_ms += dur_ms
 
         return time_ms
-
 
     def stop(self):
         print("stopping motor")
@@ -112,6 +109,7 @@ class Motor:
             self.set_movement(default)
             self.repeat = True
 
+
 class HeadLights:
     def __init__(self, left_pin, right_pin, pwm_freq, max_brightness=1):
         "cmd syntax: ('light', effect, dur)"
@@ -127,27 +125,32 @@ class HeadLights:
         self.max_increment = -1
         self.timer = Neotimer(0)
         self.timer.finished = True
+
     def headlight_thread_step(self):
         if self.ready:
             self._run_pattern()
-            sleep_ms(5)
 
     def start(self, ringtone):
         self.ready = True
         self._set_pulse_pattern_by_ringtone(ringtone)
 
     def _set_pulse_pattern_by_ringtone(self, ringtone):
-        with open(f"pulsepattern{ringtone}.json", 'r') as f:
-            self.pulse_pattern = json.load(f)
-            self.max_increment = len(self.pulse_pattern)
+        try:
+            with open(f"pulsepatterns/{ringtone}.json", 'r') as f:
+                self.pulse_pattern = json.load(f)
+                self.max_increment = len(self.pulse_pattern)
+        except FileNotFoundError:
+            self.pulse_pattern = [0.0, 0.0]
+            self.max_increment = 1
 
     def _run_pattern(self):
         if self.increment > self.max_increment:
             self.stop()
 
         if self.timer.finished():
-            waitfor = self.pulse_pattern[self.increment][0] - self.pulse_pattern[self.increment-1][0]
-            strength = self.pulse_pattern[self.increment-1][1]
+            waitfor = self.pulse_pattern[self.increment][0] - \
+                self.pulse_pattern[self.increment - 1][0]
+            strength = self.pulse_pattern[self.increment - 1][1]
             if strength > self.max_brightness:
                 strength = self.max_brightness
 
@@ -158,7 +161,6 @@ class HeadLights:
             self.timer.start()
 
 
-    
 class Button:
     def __init__(self, pin, callback, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -247,6 +249,3 @@ class Switch:
 
     def get_state(self):
         return self.stable_state
-
-
-
