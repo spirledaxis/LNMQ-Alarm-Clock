@@ -5,6 +5,8 @@ import config
 import json
 from lib import timeutils
 from time import sleep_ms
+import framebuf  # type: ignore
+
 
 class SetAlarm(DisplayState):
     def __init__(self, display_manager, alarm, name):
@@ -25,7 +27,7 @@ class SetAlarm(DisplayState):
             self.minute = int(alarm_json['minute'])
             self.ampm = alarm_json['ampm']
             self.ringtone_index = alarm_json['ringtone']
-
+            self.alarm_active = alarm_json['is_active']
         with open('ringtones.json', 'r') as f:
             self.ringtone_json = json.load(f)
 
@@ -39,13 +41,25 @@ class SetAlarm(DisplayState):
         self.ringtone_y = self.display.height // 2 + \
             timefont.height // 2 + bally.height // 2
         self.alarm = alarm
-        self.edit_options = ['hour', 'minute', 'ampm', 'ringtone', 'volume']
+        self.edit_options = [
+            'hour',
+            'minute',
+            'ampm',
+            'bell',
+            'ringtone',
+            'volume']
         self.edit_index = 0
         self.display_manager = display_manager
         self.motor = config.motor
         self.motor.ready = False
-        self.offsetx = self.display.width - 10 # offset from the left edge where things are drawn
-        self.ampm_offsetx = 10 #offset from the right edge, needs to be added to ampm len
+        # offset from the left edge where things are drawn
+        self.offsetx = self.display.width - 10
+        self.ampm_offsetx = 10  # offset from the right edge, needs to be added to ampm len
+
+        self.bell_active = framebuf.FrameBuffer(bytearray((
+            [0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])), 8, 8, framebuf.MONO_VLSB)
+        self.bell_inactive = framebuf.FrameBuffer(bytearray((
+            [0x03, 0x0d, 0x13, 0xe6, 0xec, 0x18, 0x3c, 0x23])), 8, 8, framebuf.MONO_VLSB)
 
     def on_fwd(self):
         if self.selection == 'minute':
@@ -80,6 +94,8 @@ class SetAlarm(DisplayState):
                 self.volume = 1
             else:
                 self.volume += 1
+        elif self.selection == 'bell':
+            self.alarm_active = not self.alarm_active
 
     def on_rev(self):
         if self.selection == 'minute':
@@ -112,6 +128,8 @@ class SetAlarm(DisplayState):
                 self.volume = 30
             else:
                 self.volume -= 1
+        elif self.selection == 'bell':
+            self.alarm_active = not self.alarm_active
 
     def preview(self):
         if not config.speaker.queryBusy():
@@ -119,6 +137,7 @@ class SetAlarm(DisplayState):
             config.speaker.setVolume(self.volume)
             config.speaker.playTrack(1, self.ringtone_index)
             self.motor.start()
+            self.alarm.headlights.start(self.ringtone_index)
         else:
             config.speaker.pause()
             self.motor.stop()
@@ -149,6 +168,7 @@ class SetAlarm(DisplayState):
             "ringtone": self.ringtone_index,
             "volume": self.volume,
             "alarm_message": alarm_msg,
+            "is_active": self.alarm_active
         }
 
         for ringtone in self.ringtone_json:
@@ -176,13 +196,26 @@ class SetAlarm(DisplayState):
         time_display = f"{self.hour}:{self.minute:02}"
 
         y = self.display.height // 2 - timefont.height // 2
-        self.display.draw_text(self.offsetx, y, time_display, timefont, rotate=180)
+        self.display.draw_text(
+            self.offsetx,
+            y,
+            time_display,
+            timefont,
+            rotate=180)
         if self.hour > 9:
             self.ampm_offsetx = 0
         else:
             self.ampm_offsetx = 10
-            
-        self.display.draw_text(self.ampm_offsetx+timefont.measure_text(self.ampm), y, self.ampm, timefont, rotate=180)
+
+        self.display.draw_text(
+            self.ampm_offsetx +
+            timefont.measure_text(
+                self.ampm),
+            y,
+            self.ampm,
+            timefont,
+            rotate=180)
+
     def display_ringtone(self):
         ringtone_text = f"{self.ringtone_index}. {self.ringtone_json[self.ringtone_index-1]['description']}"
 
@@ -191,7 +224,26 @@ class SetAlarm(DisplayState):
 
         volume_percentage = round((self.volume / 30) * 100)
         volume_text = f"Volume: {volume_percentage}% ({self.volume})"
-        self.display.draw_text(self.offsetx, self.volume_y, volume_text, bally, rotate=180)
+        self.display.draw_text(
+            self.offsetx,
+            self.volume_y,
+            volume_text,
+            bally,
+            rotate=180)
+
+    def display_bell(self):
+        if self.alarm_active:
+            self.display.draw_sprite(self.bell_active,
+                                     self.display.width // (72 + 10),
+                                     (self.display.height // 2) + 4,
+                                     8,
+                                     8)
+        else:
+            self.display.draw_sprite(self.bell_inactive,
+                                     self.display.width // (72 + 10),
+                                     (self.display.height // 2) + 4,
+                                     8,
+                                     8)
 
     def selection_line(self):
         x = self.offsetx
@@ -224,8 +276,29 @@ class SetAlarm(DisplayState):
                 self.offsetx, self.volume_y, bally.height
             )
 
+        elif self.selection == 'bell':
+            self.display.draw_hline(
+                self.display.width // (72 + 10), (self.display.height // 2), 8)
+
     def main(self):
         self.display_alarm_time()
-        self.selection_line()
         self.display_ringtone()
         self.motor.do_movement()
+        self.display_bell()
+        self.selection_line()
+
+
+if __name__ == '__main__':
+    from displaystates import mode
+
+    from alarm import Alarm
+    displaymanager = mode.DisplayManager()
+    from config import motor, speaker, switch
+    from hardware import Switch
+    switch = Switch(switch)
+    alarm = Alarm(60, motor, speaker, switch)
+    setalarm = SetAlarm(displaymanager, alarm, "test")
+    displaymanager.display_states = [setalarm]
+    displaymanager.set_active_state("test")
+    while True:
+        displaymanager.run_current_state()
