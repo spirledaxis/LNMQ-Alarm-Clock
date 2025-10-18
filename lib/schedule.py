@@ -4,6 +4,7 @@ class Schedule:
     def __init__(self):
         self.jobs = []  # list of (hour, minute, callback, triggered)
         raise NotImplementedError("Not tested whatsoever!")
+
     def add_job(self, hour, minute, callback):
         """Add a scheduled job. Hour should be 24 hour time"""
         self.jobs.append({

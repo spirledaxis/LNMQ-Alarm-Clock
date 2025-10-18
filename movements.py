@@ -1,19 +1,19 @@
 i_am_speed = [
-    ('w', 600, 100),     
-    ('r', 1133, 30), #exhale 
-    ('l', 733, 40), #exhale 2
+    ('w', 600, 100),
+    ('r', 1133, 30),  # exhale
+    ('l', 733, 40),  # exhale 2
     ('w', 6300, 100),
-    ('r', 2184, 100), #racing sounds
-    ('l', 1133, 80), #one winner
-    ('r', 1183, 80), #42 losers
-    ('w', 2634, 100), #I eat losers for breakfeast
-    ('r', 2633, 100), #racing sounds
-    ('w', 813, 100), #"speed"
-    ('r', 2500, 100), #racing sounds
-    ('l', 884, 80), #I am faster than fast
-    ('r', 1150, 80), #quicker than quick
-    ('w', 1433, 100), #I am lightning
-    ]
+    ('r', 2184, 100),  # racing sounds
+    ('l', 1133, 80),  # one winner
+    ('r', 1183, 80),  # 42 losers
+    ('w', 2634, 100),  # I eat losers for breakfeast
+    ('r', 2633, 100),  # racing sounds
+    ('w', 813, 100),  # "speed"
+    ('r', 2500, 100),  # racing sounds
+    ('l', 884, 80),  # I am faster than fast
+    ('r', 1150, 80),  # quicker than quick
+    ('w', 1433, 100),  # I am lightning
+]
 
 freedom_dive = [
     ('l', 333.0, 100),
@@ -178,6 +178,3 @@ clash_royale = [
     ("l", 375, 100),
     ("r", 875, 100)
 ]
-
-
-

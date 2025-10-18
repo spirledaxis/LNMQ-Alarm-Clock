@@ -135,8 +135,8 @@ class MessageViewer(DisplayState):
         y = 1 + abs(self.drift_offset)
         padding = 3
         if self.invert:
-            self.display.fill_rectangle(self.display.width-start_x+self.drift_offset -
-                                        total_width-padding, y, total_width+2*padding, 8, invert=False)
+            self.display.fill_rectangle(self.display.width - start_x + self.drift_offset -
+                                        total_width - padding, y, total_width + 2 * padding, 8, invert=False)
             if self.display_manager.switch.get_state():
                 self.display.draw_sprite(
                     self.inverted_bell, x=x, y=y, w=8, h=8)

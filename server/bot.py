@@ -6,7 +6,7 @@ import re
 import textwrap
 import time
 import json
-char_lens = { #based on Bally7x9
+char_lens = {  # based on Bally7x9
     ' ': 5,
     '!': 5,
     '"': 6,
@@ -236,7 +236,7 @@ async def send_message(ctx: SlashContext, message: str, show_name=True):
                scopes=servers)
 @slash_option(name='message', description='',
               opt_type=OptionType.STRING, required=True)
-@slash_option(name='onscreen_check', 
+@slash_option(name='onscreen_check',
               description='rejects message if longer than display can show without scrolling',
               opt_type=OptionType.BOOLEAN)
 @check(is_owner())
@@ -274,21 +274,21 @@ async def set_alarm_message(ctx: SlashContext, message, onscreen_check=True):
         )
         await ctx.send(embed=embed)
         return
-    
+
     if onscreen_check:
         message_len_px = 0
         for char in list(message):
             message_len_px += char_lens[char] + 1
-        
+
         if message_len_px > 128:
             embed = interactions.Embed(
-            title="Offscreen",
-            description="This message will require scrolling. Set noscroll to false if you want a longer message.",
-            color=BrandColors.YELLOW
-        )
+                title="Offscreen",
+                description="This message will require scrolling. Set noscroll to false if you want a longer message.",
+                color=BrandColors.YELLOW
+            )
             await ctx.send(embed=embed)
             return
-    
+
     if len(message) > 100:
         embed = interactions.Embed(
             title="Too long",
@@ -337,7 +337,7 @@ async def set_alarm_message(ctx: SlashContext, message, onscreen_check=True):
             desc = "Alarm message set to random MOTD"
         else:
             desc = "Sent alarm message successfully!"
-            
+
         embed = interactions.Embed(
             title="Alarm message sent!",
             description=desc,

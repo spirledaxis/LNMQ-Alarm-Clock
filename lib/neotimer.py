@@ -116,6 +116,3 @@ class Neotimer:
             return True
         else:
             return False
-
-
-

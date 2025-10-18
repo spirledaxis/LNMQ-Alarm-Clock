@@ -53,6 +53,3 @@ def select_random_motd(data):
     motd = id_search(data, r)
     print(motd)
     return motd
-
-
-
