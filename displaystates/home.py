@@ -14,6 +14,7 @@ import socket
 from displaystates import aliases
 import errno
 import time
+from lib import tmp117_temp
 
 
 class Home(DisplayState):
@@ -59,6 +60,8 @@ class Home(DisplayState):
 
         self.bell_icon_fb = make_icon(
             [0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
+        self.bell_icon_off = make_icon(
+            [0x03, 0x0d, 0x13, 0xe6, 0xec, 0x18, 0x3c, 0x23])
         self.plug_icon = make_icon(
             [0x00, 0x10, 0xf8, 0x1f, 0x1f, 0xf8, 0x10, 0x00])
         self.battery_icon = make_icon(
@@ -71,6 +74,7 @@ class Home(DisplayState):
             [0xff, 0xa1, 0x91, 0x8d, 0x8d, 0x91, 0xa1, 0xff])
         self.sleep_icon = make_icon(
             [0x40, 0x20, 0x42, 0x05, 0x42, 0x20, 0x40], 7, 7)
+        self.degree_symbol = make_icon([0x02, 0x05, 0x02], 3, 3)
 
         self.blink_wifi_max = config.blink_wifi_max
         self.blinked_wifi = 0
@@ -124,8 +128,26 @@ class Home(DisplayState):
 
     def draw_looptime(self):
         # A constant is used in the x so it doesn't jitter
-        self.display.draw_text((self.display.width + self.time_len)//2 + 18 + self.offset, (self.display.height + timefont.height)//2 - bally_mini.height - 3,
+        self.display.draw_text((self.display.width + self.time_len) // 2 + 18 + self.offset, (self.display.height + timefont.height) // 2 - bally_mini.height - 3,
                                f'{self.looptime}', bally_mini, rotate=180)
+
+    def draw_temp(self):
+        x = (self.display.width + self.time_len) // 2 + 18 + 10 + self.offset
+        y = (self.display.height + timefont.height) // 2 - \
+            timefont.height + bally_mini.height
+        tempurature = tmp117_temp.read_tmp117_temp()
+        tempurature = round(tempurature, 1)
+        self.display.draw_text(x, y, f'{tempurature}', bally_mini, rotate=180)
+        self.display.draw_sprite(
+            self.degree_symbol,
+            x -
+            bally_mini.measure_text(f'{tempurature}') -
+            5,
+            y +
+            bally_mini.height //
+            2,
+            3,
+            3)
 
     def draw_estimated_sleep(self):
         now = self.rtc.datetime()
@@ -149,13 +171,13 @@ class Home(DisplayState):
             hours += 24
 
         disp_str = f'{hours}:{minutes:02}'
-        x = (self.display.width + self.time_len)//2 + \
+        x = (self.display.width + self.time_len) // 2 + \
             bally_mini.measure_text(disp_str) + self.offset
-        y = self.display.height // 2 - timefont.height // 2 + bally_mini.height//2 + 2
+        y = self.display.height // 2 - timefont.height // 2 + bally_mini.height // 2 + 2
         if (hours <= 8 and minutes <= 30) or hours <= 7:
             self.apply_offset = True
             self.display.draw_text(x, y, disp_str, bally_mini, rotate=180)
-            self.display.draw_sprite(self.sleep_icon, x+2, y+1, 7, 7)
+            self.display.draw_sprite(self.sleep_icon, x + 2, y + 1, 7, 7)
         else:
             self.apply_offset = False
 
@@ -206,23 +228,33 @@ class Home(DisplayState):
         x1 = ((self.display.width - self.time_len) // 4) + 4 + self.offset
         x2 = ((self.display.width - self.time_len) // 4) - 8 + self.offset
 
-        if self.display_manager.switch.get_state():
+        if self.display_manager.alarm_active:
             self.iconactive_bell = True
-            self.display.draw_sprite(self.bell_icon_fb, x=x1, y=(self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(
+                self.bell_icon_fb, x=x1, y=(
+                    self.display.height // 2) + 4, w=8, h=8)
         else:
             self.iconactive_bell = False
-            self.display.fill_rectangle(x=x1 - 8, y=(self.display.height // 2) + 4 + self.offset, w=8, h=8, invert=True)
+            self.display.draw_sprite(
+                self.bell_icon_off, x=x1, y=(
+                    self.display.height // 2) + 4, w=8, h=8)
 
         if self.usb_power.value() == 1:
             self.iconactive_battery = False
-            self.display.draw_sprite(self.plug_icon, x=x1, y=(self.display.height // 2) - 8, w=8, h=8)
+            self.display.draw_sprite(
+                self.plug_icon, x=x1, y=(
+                    self.display.height // 2) - 8, w=8, h=8)
         elif now[6] % 2 == 0:
             self.iconactive_battery = True
-            self.display.draw_sprite(self.battery_icon, x=x1, y=(self.display.height // 2) - 8, w=8, h=8)
+            self.display.draw_sprite(
+                self.battery_icon, x=x1, y=(
+                    self.display.height // 2) - 8, w=8, h=8)
 
         if network.WLAN(network.WLAN.IF_STA).isconnected():
             self.iconactive_wifi = True
-            self.display.draw_sprite(self.wifi_icon, x=x2, y=(self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(
+                self.wifi_icon, x=x2, y=(
+                    self.display.height // 2) + 4, w=8, h=8)
         elif self.blink_wifi_inverval.repeat_execution() and self.blink_wifi:
             self.blinked_wifi += 1
             if self.blinked_wifi >= self.blink_wifi_max:
@@ -230,14 +262,19 @@ class Home(DisplayState):
                 self.blink_wifi = False
         else:
             self.iconactive_wifi = False
-            self.display.draw_sprite(self.no_wifi_icon, x=x2, y=(self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(
+                self.no_wifi_icon, x=x2, y=(
+                    self.display.height // 2) + 4, w=8, h=8)
 
         if len(self.new_motds) != 0:
             self.iconactive_mail = True
-            self.display.draw_sprite(self.mail_icon, x=x2, y=(self.display.height // 2) - 8, w=8, h=8)
+            self.display.draw_sprite(
+                self.mail_icon, x=x2, y=(
+                    self.display.height // 2) - 8, w=8, h=8)
         else:
             self.iconactive_mail = False
-            self.display.fill_rectangle(x=x2, y=(self.display.height // 2) - 8, w=8, h=8, invert=True)
+            self.display.fill_rectangle(
+                x=x2, y=(self.display.height // 2) - 8, w=8, h=8, invert=True)
 
     def draw_cube(self):
         # Function to multiply two matrices
@@ -416,21 +453,55 @@ class Home(DisplayState):
         self.display_manager.set_active_state(aliases.message_reader)
 
     def main(self):
+        start = time.ticks_ms()
+
         # self.draw_cube()
+        t0 = time.ticks_ms()
         self.clock()
+        t1 = time.ticks_ms()
+
         self.draw_estimated_sleep()
+        t2 = time.ticks_ms()
+
         self.draw_icons()
+        t3 = time.ticks_ms()
+
         self.draw_looptime()
+        t4 = time.ticks_ms()
+
+        self.draw_temp()
+        t5 = time.ticks_ms()
+
         if self.motd_mode == 'scroll':
             self.scroll_motd()
+            t6 = time.ticks_ms()
+            motd_label = "scroll_motd"
         elif self.motd_mode == 'bounce':
             self.bounce_motd()
-        
+            t6 = time.ticks_ms()
+            motd_label = "bounce_motd"
+        else:
+            t6 = t5
+            motd_label = "no_motd"
+
         if self.apply_offset:
             self.offset = self.offset_val
         else:
             self.offset = 0
-        
+
+        total = time.ticks_diff(t6, start)
+
+        print(
+            "clock:", time.ticks_diff(t1, t0), "ms,",
+            "draw_estimated_sleep:", time.ticks_diff(t2, t1), "ms,",
+            "draw_icons:", time.ticks_diff(t3, t2), "ms,",
+            "draw_looptime:", time.ticks_diff(t4, t3), "ms,",
+            "draw_temp:", time.ticks_diff(t5, t4), "ms,",
+            motd_label + ":", time.ticks_diff(t6, t5), "ms,",
+            "total:", total, "ms"
+        )
+
+
 if __name__ == '__main__':
     from displaystates import mode
 
@@ -439,7 +510,7 @@ if __name__ == '__main__':
     from config import motor, speaker, switch
     from hardware import Switch
     switch = Switch(switch)
-    alarm = Alarm(60, motor, speaker, switch)
+    alarm = Alarm(60, motor, 12, speaker, switch)
     home = Home(displaymanager, alarm, "test")
     displaymanager.display_states = [home]
     displaymanager.set_active_state("test")
