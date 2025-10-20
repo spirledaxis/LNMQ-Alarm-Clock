@@ -14,7 +14,7 @@ import socket
 from displaystates import aliases
 import errno
 import time
-from lib import tmp117_temp
+from lib import tmp117_temp, batvoltage
 
 
 class Home(DisplayState):
@@ -24,7 +24,7 @@ class Home(DisplayState):
             Button(config.snze_l, self.on_snze),
             Button(config.fwd, self.read_msg),
             Button(config.rev, self.on_rev),
-            Button(config.snd_fx_l, self.off_display),
+            Button(config.snd_fx_l, self.on_snd_sfx),
             Button(config.clk_set, self.on_clk)
         ]
         super().__init__(self.button_map, name, display_manager)
@@ -62,6 +62,8 @@ class Home(DisplayState):
             [0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
         self.bell_icon_off = make_icon(
             [0x03, 0x0d, 0x13, 0xe6, 0xec, 0x18, 0x3c, 0x23])
+        self.snooze_icon = make_icon(
+            [0xff, 0x07, 0x0e, 0x1c, 0x38, 0x70, 0xe0, 0xff])
         self.plug_icon = make_icon(
             [0x00, 0x10, 0xf8, 0x1f, 0x1f, 0xf8, 0x10, 0x00])
         self.battery_icon = make_icon(
@@ -75,6 +77,21 @@ class Home(DisplayState):
         self.sleep_icon = make_icon(
             [0x40, 0x20, 0x42, 0x05, 0x42, 0x20, 0x40], 7, 7)
         self.degree_symbol = make_icon([0x02, 0x05, 0x02], 3, 3)
+
+        # Battery level icons (8x8)
+        self.battery_critical = make_icon(
+            [0x00, 0x7f, 0x40, 0xfb, 0xfb, 0x40, 0x7f, 0x00])
+        self.battery_full = make_icon(
+            [0x00, 0x7f, 0x7f, 0xff, 0xff, 0x7f, 0x7f, 0x00])
+        self.battery_L1 = make_icon(
+            [0x00, 0x7f, 0x47, 0xc7, 0xc7, 0x47, 0x7f, 0x00])
+        self.battery_L2 = make_icon(
+            [0x00, 0x7f, 0x47, 0xc7, 0xc7, 0x47, 0x7f, 0x00])
+        self.battery_L3 = make_icon(
+            [0x00, 0x7f, 0x4f, 0xcf, 0xcf, 0x4f, 0x7f, 0x00])
+        self.battery_L4 = make_icon(
+            [0x00, 0x7f, 0x5f, 0xdf, 0xdf, 0x5f, 0x7f, 0x00])
+
 
         self.blink_wifi_max = config.blink_wifi_max
         self.blinked_wifi = 0
@@ -228,33 +245,45 @@ class Home(DisplayState):
         x1 = ((self.display.width - self.time_len) // 4) + 4 + self.offset
         x2 = ((self.display.width - self.time_len) // 4) - 8 + self.offset
 
-        if self.display_manager.alarm_active:
+        # define vertical positions
+        y1 = (self.display.height // 2) - 8  # top row (battery, mail)
+        y2 = (self.display.height // 2) + 4  # bottom row (bell, wifi)
+
+        # Alarm bell icon
+        if self.display_manager.alarm_active and self.alarm.snoozed == False:
             self.iconactive_bell = True
-            self.display.draw_sprite(
-                self.bell_icon_fb, x=x1, y=(
-                    self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(self.bell_icon_fb, x=x1, y=y2, w=8, h=8)
+        elif self.display_manager.alarm_active and self.alarm.snoozed == True:
+            self.iconactive_bell = True
+            self.display.draw_sprite(self.snooze_icon, x=x1, y=y2, w=8, h=8)
         else:
             self.iconactive_bell = False
-            self.display.draw_sprite(
-                self.bell_icon_off, x=x1, y=(
-                    self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(self.bell_icon_off, x=x1, y=y2, w=8, h=8)
 
+        # Power and battery icons
         if self.usb_power.value() == 1:
             self.iconactive_battery = False
-            self.display.draw_sprite(
-                self.plug_icon, x=x1, y=(
-                    self.display.height // 2) - 8, w=8, h=8)
+            self.display.draw_sprite(self.plug_icon, x=x1, y=y1, w=8, h=8)
         elif now[6] % 2 == 0:
             self.iconactive_battery = True
-            self.display.draw_sprite(
-                self.battery_icon, x=x1, y=(
-                    self.display.height // 2) - 8, w=8, h=8)
+            v_battery = batvoltage.read_bat_voltage()
+            if v_battery >= 4.17:
+                self.display.draw_sprite(self.battery_full, x=x1, y=y1, w=8, h=8)
+            elif v_battery >= 4.08:
+                self.display.draw_sprite(self.battery_L4, x=x1, y=y1, w=8, h=8)
+            elif v_battery >= 4.00:
+                self.display.draw_sprite(self.battery_L3, x=x1, y=y1, w=8, h=8)
+            elif v_battery >= 3.92:
+                self.display.draw_sprite(self.battery_L2, x=x1, y=y1, w=8, h=8)
+            elif v_battery >= 3.83:
+                self.display.draw_sprite(self.battery_L1, x=x1, y=y1, w=8, h=8)
+            else:
+                self.display.draw_sprite(self.battery_critical, x=x1, y=y1, w=8, h=8)
 
+        # WiFi icons
         if network.WLAN(network.WLAN.IF_STA).isconnected():
             self.iconactive_wifi = True
-            self.display.draw_sprite(
-                self.wifi_icon, x=x2, y=(
-                    self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(self.wifi_icon, x=x2, y=y2, w=8, h=8)
         elif self.blink_wifi_inverval.repeat_execution() and self.blink_wifi:
             self.blinked_wifi += 1
             if self.blinked_wifi >= self.blink_wifi_max:
@@ -262,19 +291,16 @@ class Home(DisplayState):
                 self.blink_wifi = False
         else:
             self.iconactive_wifi = False
-            self.display.draw_sprite(
-                self.no_wifi_icon, x=x2, y=(
-                    self.display.height // 2) + 4, w=8, h=8)
+            self.display.draw_sprite(self.no_wifi_icon, x=x2, y=y2, w=8, h=8)
 
+        # Mail icon
         if len(self.new_motds) != 0:
             self.iconactive_mail = True
-            self.display.draw_sprite(
-                self.mail_icon, x=x2, y=(
-                    self.display.height // 2) - 8, w=8, h=8)
+            self.display.draw_sprite(self.mail_icon, x=x2, y=y1, w=8, h=8)
         else:
             self.iconactive_mail = False
-            self.display.fill_rectangle(
-                x=x2, y=(self.display.height // 2) - 8, w=8, h=8, invert=True)
+            self.display.fill_rectangle(x=x2, y=y1, w=8, h=8, invert=True)
+
 
     def draw_cube(self):
         # Function to multiply two matrices
@@ -385,7 +411,12 @@ class Home(DisplayState):
         self.blinked_wifi = 0
         self.display_manager.set_active_state(aliases.set_alarm)
 
-    def off_display(self):
+    def on_snd_sfx(self):
+        if self.alarm.is_active:
+            self.alarm.stop()
+            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+            self.motd_mode = 'scroll'
+
         self.blink_wifi = False
         self.blinked_wifi = 0
         self.display_manager.set_active_state(aliases.display_off)
@@ -425,9 +456,8 @@ class Home(DisplayState):
 
     def on_snze(self):
         if self.alarm.is_active:
-            self.alarm.stop()
-            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
-            self.motd_mode = 'scroll'
+            self.alarm.snooze()
+
 
         else:
             print("turning off light")
@@ -453,53 +483,23 @@ class Home(DisplayState):
         self.display_manager.set_active_state(aliases.message_reader)
 
     def main(self):
-        start = time.ticks_ms()
-
         # self.draw_cube()
-        t0 = time.ticks_ms()
         self.clock()
-        t1 = time.ticks_ms()
-
         self.draw_estimated_sleep()
-        t2 = time.ticks_ms()
-
         self.draw_icons()
-        t3 = time.ticks_ms()
-
         self.draw_looptime()
-        t4 = time.ticks_ms()
-
         self.draw_temp()
-        t5 = time.ticks_ms()
 
         if self.motd_mode == 'scroll':
             self.scroll_motd()
-            t6 = time.ticks_ms()
-            motd_label = "scroll_motd"
         elif self.motd_mode == 'bounce':
             self.bounce_motd()
-            t6 = time.ticks_ms()
-            motd_label = "bounce_motd"
-        else:
-            t6 = t5
-            motd_label = "no_motd"
 
         if self.apply_offset:
             self.offset = self.offset_val
         else:
             self.offset = 0
 
-        total = time.ticks_diff(t6, start)
-
-        print(
-            "clock:", time.ticks_diff(t1, t0), "ms,",
-            "draw_estimated_sleep:", time.ticks_diff(t2, t1), "ms,",
-            "draw_icons:", time.ticks_diff(t3, t2), "ms,",
-            "draw_looptime:", time.ticks_diff(t4, t3), "ms,",
-            "draw_temp:", time.ticks_diff(t5, t4), "ms,",
-            motd_label + ":", time.ticks_diff(t6, t5), "ms,",
-            "total:", total, "ms"
-        )
 
 
 if __name__ == '__main__':
