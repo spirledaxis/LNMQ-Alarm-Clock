@@ -21,18 +21,21 @@ from machine import RTC  # type: ignore
 import framebuf
 import config
 from bigicons import *
+from utime import sleep_ms  # type: ignore
 
 booticon = framebuf.FrameBuffer(
     booticon, 128, 64, framebuf.MONO_VLSB)
 config.display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
 config.display.present()
 
-
+stop_threads = False
 booticon_warning = framebuf.FrameBuffer(
     booticon_warning, 128, 64, framebuf.MONO_VLSB)
 
 usb_power = Pin('WL_GPIO2', Pin.IN)
 usb_prev_state = None
+
+rtc = RTC()
 
 
 def http_get(host, port, path):
@@ -82,6 +85,8 @@ def cache_stuff():
             print("timed out while getting cached motds")
         else:
             raise
+
+        print("slime me out")
     try:
         new_alarm_msg = http_get(
             config.server_ip, config.server_port, "/fetch_alarm_msg")
@@ -119,20 +124,21 @@ def cache_stuff():
 
 
 try:
-    wifi = connect.do_connect()
-    #settime()
-    cache_stuff()
+    # wifi = connect.do_connect()
+    # settime()
+    # cache_stuff()
     s, clients = webserver.web_setup()
-    rtc = RTC()
 
     switch = Switch(config.switch)
 
     myalarm = Alarm(config.alarm_timeout_min * 60,
-                    config.motor, config.speaker, switch)
+                    config.motor, config.headlights, config.speaker, switch)
+
     def threads():
-        while True:
+        while not stop_threads:
             config.motor.motor_thread_step()
             config.headlights.headlight_thread_step()
+            time.sleep_us(1500)
 
     _thread.start_new_thread(threads, ())
     display_manager = mode.DisplayManager()
@@ -162,11 +168,13 @@ try:
     loopcycles = 0
     while True:
         start = time.ticks_ms()
+        displaytimer = time.ticks_ms()
         display_manager.run_current_state()
+        display_elapsed = time.ticks_diff(time.ticks_ms(), start)
         now = rtc.datetime()
 
         # webserver
-
+        webservertimer = time.ticks_ms()
         status = {
             "bell": -1,
             "wifi": -1,
@@ -175,11 +183,9 @@ try:
             "message": home.motd,
             "queue": home.new_motds
         }
-        #status = json.dumps(status)
-        status = '{"bell": -1, "battery": -1, "mail": true, "message": "default motd", "wifi": -1, "queue": [{"motd": "hi neel", "id": 13, "author": "awdev_", "time": [2025, 10, 10, 4, 23, 12, 40, 0], "new": true}]}'
+        status = json.dumps(status)
         check = webserver.web_server(s, clients, status)
         if check is not None:
-            print(check)
             if check[0] == 'motd':
                 home.new_motds.append(check[1])
             elif check[0] == 'alarm_msg' and check[1] == 'random':
@@ -191,17 +197,11 @@ try:
 
                 with open('alarm.json', 'w') as f:
                     json.dump(data, f)
-
+        webserver_elapsed = time.ticks_diff(time.ticks_ms(), webservertimer)
         # handle alarm
-        myalarm.update(now, home)
+        if display_manager.alarm_active:
+            myalarm.update(now, home)
 
-        # debug stuff
-        dur = display_manager.display_timer.get_remaining()
-        done = display_manager.display_timer.finished()
-        cycle_time = time.ticks_diff(time.ticks_ms(), start)
-        print(dur, done, cycle_time, f'{gc.mem_free()/1000} KB')
-
-        home.looptime = cycle_time
         # ntp
         hour = now[4]
         minute = now[5]
@@ -226,10 +226,18 @@ try:
 
         usb_prev_state = usb_power.value()
         loopcycles += 1
-        if loopcycles % 50 == 0:
-            print("garbage colelcting")
-            gc.collect()
-        
+
+        gc.collect()
+
+        # debug stuff
+        dur = display_manager.display_timer.get_remaining()
+        done = display_manager.display_timer.finished()
+        cycle_time = time.ticks_diff(time.ticks_ms(), start)
+        #print(dur, done, f'{gc.mem_free()/1000} KB')
+        #print(
+            #f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed}")
+        home.looptime = cycle_time
+
 except Exception as e:
     # TODO: add emergency alarm
     config.speaker.cleanup()
@@ -244,27 +252,28 @@ except Exception as e:
         tb_str = buf.getvalue()
         tb_str = tb_str.replace(" ", "+")
         buf.close()
-        status = http_get(config.server_ip, config.server_port, f'/?error={tb_str}')
+        status = http_get(config.server_ip,
+                          config.server_port, f'/?error={tb_str}')
         print(status)
         if status == 'Error recieved':
             print("server recived the error")
-    except:
+    except BaseException:
         print("could not log to server, it'll be saved on the pico")
 
     finally:
         with open('errors.txt', 'a') as f:
             sys.print_exception(e, f)
             f.write(f'\n{rtc.datetime()}\n')
-        
+
         print("saved error to pico")
-        
+
     booticon_warning = framebuf.FrameBuffer(
         failicon, 128, 64, framebuf.MONO_VLSB)
     display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
     display.present()
     timer = Neotimer(config.bsod_timeout_s * 1000)
     timer.start()
-    from utime import sleep_ms  # type: ignore
+
     while not timer.finished():
         sleep_ms(100)
 
@@ -273,4 +282,6 @@ finally:
     config.speaker.cleanup()
     display.cleanup()
     config.motor.stop()
+    config.headlights.stop()
+    stop_threads = True
     print("cleanup success!")
