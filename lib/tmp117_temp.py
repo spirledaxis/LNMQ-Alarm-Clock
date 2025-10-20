@@ -1,5 +1,5 @@
 from machine import I2C, Pin
-import time
+import config
 # straight from Mr.GPT, idk how accurate it is
 # TODO: look at adafruits circutpython and mirror it in micro
 # TMP117 default I2C address
@@ -7,7 +7,7 @@ TMP117_ADDR = 0x48
 TMP117_TEMP_REG = 0x00
 
 # Initialize I2C (adjust pins and bus as needed)
-i2c = I2C(1, scl=Pin(27), sda=Pin(26), freq=400000)
+i2c = I2C(1, scl=Pin(config.tmp_scl), sda=Pin(config.tmp_sda), freq=400000)
 
 
 def read_tmp117_temp():
