@@ -98,7 +98,7 @@ def web_server(s, clients, status):
                     cl.send(status)
                     cl.close()
                     continue
-                
+
                 if 'GET /?alarm_msg=' in request:
                     query = request.split('GET /?')[1].split(' ')[0]
                     params = query.split('&')
@@ -128,4 +128,3 @@ def web_server(s, clients, status):
                 print("client error:", e)
                 cl.close()
                 clients.remove(cl)
-
