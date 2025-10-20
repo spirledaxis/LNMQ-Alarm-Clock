@@ -27,6 +27,7 @@ class Alarm:
         self.speaker = speaker
         self.speaker_state_timer = Neotimer(1000)
         self.original_ringtone = self.ringtone
+        self.snoozed = False
 
     def update(self, now, home):
         """
@@ -90,6 +91,15 @@ class Alarm:
         self.headlights.start(self.ringtone)
         self.timeout_timer.start()
         self.speaker_state_timer.start()
+    def snooze(self):
+        self.is_active = False
+        self.snoozed = True
+        self.minute += 10
+        if self.minute > 60:
+            self.hour += 1
+            if self.hour > 23:
+                self.hour = 0
+            self.minute = self.minute % 60
 
     def stop(self):
         print("stopping...")
@@ -102,3 +112,17 @@ class Alarm:
         self.timeout_timer.reset()
         self.is_active = False
         self.ringtone = self.original_ringtone
+
+        if self.snoozed:
+            with open('alarm.json', 'r') as f:
+                data = json.load(f)
+            
+            self.hour = data['hour']
+            self.minute = data['minute']
+            ampm = data['ampm']
+            if ampm == 'pm':
+                self.hour += 12
+                if self.hour >= 24:
+                    self.hour = 0
+
+            self.snoozed = False
