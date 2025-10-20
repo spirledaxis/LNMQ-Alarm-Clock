@@ -112,53 +112,79 @@ class Motor:
 
 class HeadLights:
     def __init__(self, left_pin, right_pin, pwm_freq, max_brightness=1):
-        "cmd syntax: ('light', effect, dur)"
+        """
+        HeadLights controller
+        cmd syntax: ('light', effect, dur)
+        """
         self.left_light = PWM(Pin(left_pin), pwm_freq, duty_u16=0)
         self.right_light = PWM(Pin(right_pin), pwm_freq, duty_u16=0)
         self.max_brightness = max_brightness
-        self.stop()
+        self.stop()  # initialize state
 
     def stop(self):
+        """Stop any running pattern and reset state"""
         self.ready = False
         self.pulse_pattern = None
-        self.increment = 1
+        self.increment = 0
         self.max_increment = -1
         self.timer = Neotimer(0)
-        self.timer.finished = True
+        self.timer.start()  # start a zero-duration timer to avoid errors
+
+    def start(self, ringtone):
+        """Load a pulse pattern and start the lights"""
+        self._set_pulse_pattern_by_ringtone(ringtone)
+        self.ready = True
+        self.increment = 0  # always start at the beginning
 
     def headlight_thread_step(self):
+        """Call repeatedly to step through the light pattern"""
         if self.ready:
             self._run_pattern()
 
-    def start(self, ringtone):
-        self.ready = True
-        self._set_pulse_pattern_by_ringtone(ringtone)
-
     def _set_pulse_pattern_by_ringtone(self, ringtone):
+        """Load pulse pattern from JSON file"""
         try:
             with open(f"pulsepatterns/{ringtone}.json", 'r') as f:
                 self.pulse_pattern = json.load(f)
-                self.max_increment = len(self.pulse_pattern)
+                # ensure it’s a list of lists
+                if not all(isinstance(item, list) for item in self.pulse_pattern):
+                    self.pulse_pattern = [[t, s] for t, s in self.pulse_pattern]
+                self.max_increment = len(self.pulse_pattern) - 1
+                print("found pulsepattern")
         except FileNotFoundError:
-            self.pulse_pattern = [0.0, 0.0]
-            self.max_increment = 1
+            print("no pulsepattern found, using default")
+            self.pulse_pattern = [[5000, 1.0]]  # always a list of lists
+            self.max_increment = 0
 
     def _run_pattern(self):
+        """Execute the next step in the pulse pattern"""
         if self.increment > self.max_increment:
             self.stop()
+            return
 
         if self.timer.finished():
-            waitfor = self.pulse_pattern[self.increment][0] - \
-                self.pulse_pattern[self.increment - 1][0]
-            strength = self.pulse_pattern[self.increment - 1][1]
+            # handle first element separately
+            if self.increment == 0:
+                waitfor = self.pulse_pattern[0][0]
+                strength = self.pulse_pattern[0][1]
+            else:
+                waitfor = self.pulse_pattern[self.increment][0] - \
+                          self.pulse_pattern[self.increment - 1][0]
+                strength = self.pulse_pattern[self.increment - 1][1]
+
+            # clamp strength to max_brightness
             if strength > self.max_brightness:
                 strength = self.max_brightness
 
+            # set PWM duty
             self.left_light.duty_u16(int(strength * 65535))
             self.right_light.duty_u16(int(strength * 65535))
+
+            # advance to next step
             self.increment += 1
             self.timer = Neotimer(waitfor)
             self.timer.start()
+
 
 
 class Button:
