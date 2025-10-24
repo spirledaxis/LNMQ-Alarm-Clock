@@ -136,11 +136,13 @@ class SetAlarm(DisplayState):
             self.motor.set_movement_by_ringtone(self.ringtone_index)
             config.speaker.setVolume(self.volume)
             config.speaker.playTrack(1, self.ringtone_index)
-            self.motor.start()
-            self.alarm.headlights.start(self.ringtone_index)
+            #self.motor.start()
+            config.headlights.start(f"pulsepatterns/{self.ringtone_index}.json")
         else:
+            print("stopping preview")
             config.speaker.pause()
-            self.motor.stop()
+            #self.motor.stop()
+            config.headlights.stop()
 
     def goto_midpoint(self):
         if self.selection == 'minute':
@@ -293,12 +295,18 @@ if __name__ == '__main__':
 
     from alarm import Alarm
     displaymanager = mode.DisplayManager()
-    from config import motor, speaker, switch
+    from config import motor, speaker, switch, headlights
     from hardware import Switch
     switch = Switch(switch)
-    alarm = Alarm(60, motor, speaker, switch)
+    alarm = Alarm(60, motor, headlights, speaker, switch)
     setalarm = SetAlarm(displaymanager, alarm, "test")
     displaymanager.display_states = [setalarm]
     displaymanager.set_active_state("test")
+    import _thread
+    def headlight_loop():
+        while True:
+            headlights.run()
+    _thread.start_new_thread(headlight_loop, ())
     while True:
         displaymanager.run_current_state()
+      
