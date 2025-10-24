@@ -6,7 +6,7 @@ import motd_parser
 
 
 class Alarm:
-    def __init__(self, timeout_s, motor, headlights, speaker, switch):
+    def __init__(self, timeout_s, motor, headlights, speaker):
         """use military time for the hour. """
         with open('alarm.json', 'r') as f:
             # print(f.read())
@@ -18,7 +18,7 @@ class Alarm:
 
         self.hour = timeutils.to_military_time(alarm_hour, alarm_ampm)
         self.timeout_timer = Neotimer(timeout_s * 1000)
-        self.switch = switch
+     
         self.is_active = False
         self.locked = False  # used so we don't call fire for the entire minute
         self.motor = motor
