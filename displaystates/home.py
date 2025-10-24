@@ -64,7 +64,7 @@ class Home(DisplayState):
         self.bell_icon_off = make_icon(
             [0x03, 0x0d, 0x13, 0xe6, 0xec, 0x18, 0x3c, 0x23])
         self.snooze_icon = make_icon(
-            [0xff, 0x07, 0x0e, 0x1c, 0x38, 0x70, 0xe0, 0xff])
+            [0xc1, 0xe1, 0xf1, 0xb9, 0x9d, 0x8f, 0x87, 0x83])
         self.plug_icon = make_icon(
             [0x00, 0x10, 0xf8, 0x1f, 0x1f, 0xf8, 0x10, 0x00])
         self.battery_icon = make_icon(
@@ -498,7 +498,7 @@ class Home(DisplayState):
         if self.motd_mode == 'scroll':
             self.scroll_motd()
             self.bounce_firstime = True
-            
+
         elif self.motd_mode == 'bounce':
             self.bounce_motd()
 
