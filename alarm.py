@@ -57,7 +57,9 @@ class Alarm:
                 print("going at it again")
                 # self.motor.stop()  # stop the motor in the case that the movement is longer than the audio
                 # Can't use this because it introduces delay which cooks sync
+                self.headlights.stop()
                 self.speaker.playTrack(1, self.ringtone)
+                self.headlights.start(f"pulsepatterns/{self.ringtone}.json")
                 self.motor.start()
                 self.speaker_state_timer.restart()
 
@@ -86,9 +88,9 @@ class Alarm:
         home.motd = alarm_message
         self.speaker.setVolume(volume)
         self.speaker.playTrack(1, self.ringtone)
-        self.motor.start()
-        self.motor.set_movement_by_ringtone(self.ringtone)
-        self.headlights.start(self.ringtone)
+        #self.motor.start()
+        #self.motor.set_movement_by_ringtone(self.ringtone)
+        self.headlights.start(f"pulsepatterns/{self.ringtone}.json")
         self.timeout_timer.start()
         self.speaker_state_timer.start()
     def snooze(self):
