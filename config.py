@@ -2,7 +2,7 @@ from machine import SPI, Pin  # type: ignore
 from lib.ssd1309 import Display
 from lib.picodfplayer import DFPlayer
 from lib.neotimer import Neotimer
-from hardware import Motor, HeadLights
+from hardware import Motor, HeadLights, HeadLightsStream
 # motor
 motor_l = 19
 motor_r = 18
@@ -12,10 +12,10 @@ motor = Motor(motor_l, motor_r, motor_pwm_freq, motor_min_pwm)
 
 # headlights
 headlight_l = 22
-headlight_r = 10
+headlight_r = 3
 headlights_pwm_freq = 1000
-max_brightness = 0.5  # value from 0 to 1
-headlights = HeadLights(
+max_brightness = 1  # value from 0 to 1
+headlights = HeadLightsStream(
     headlight_l,
     headlight_r,
     headlights_pwm_freq,
@@ -82,3 +82,7 @@ server_port = 8080
 blink_wifi_max = 5
 sleep_offset_min = 20
 bat_adc = 28
+msg_scroll_speed = 1
+#in MHZ
+base_clock = 125
+boost_clock = 200

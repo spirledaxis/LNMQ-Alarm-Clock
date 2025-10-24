@@ -1,3 +1,11 @@
+import config
+import framebuf #type: ignore
+from bigicons import *
+booticon = framebuf.FrameBuffer(
+    booticon, 128, 64, framebuf.MONO_VLSB)
+config.display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
+config.display.present()
+
 import io
 from machine import Pin  # type: ignore
 import gc
@@ -6,27 +14,26 @@ from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
 import errno
 from config import display
 import json
-from hardware import Switch, Motor
 from alarm import Alarm
 import webserver
 import motd_parser
 from lib.neotimer import Neotimer
 from lib.ntptime import settime
+from lib import batvoltage
 import lib.connect as connect
 import displaystates.mode as mode
 import socket
 import _thread
 import time
 from machine import RTC  # type: ignore
-import framebuf
-import config
-from bigicons import *
-from utime import sleep_ms  # type: ignore
+from utime import sleep_ms, sleep_us  # type: ignore
+import machine #type: ignore
 
-booticon = framebuf.FrameBuffer(
-    booticon, 128, 64, framebuf.MONO_VLSB)
-config.display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
-config.display.present()
+
+def headlight_thread():
+    while not stop_threads:
+        config.headlights.run()
+        sleep_us(500)
 
 stop_threads = False
 booticon_warning = framebuf.FrameBuffer(
@@ -36,6 +43,9 @@ usb_power = Pin('WL_GPIO2', Pin.IN)
 usb_prev_state = None
 
 rtc = RTC()
+mhz = 200
+# machine.freq(mhz * 1_000_000)
+print(machine.freq())
 
 
 def http_get(host, port, path):
@@ -124,23 +134,17 @@ def cache_stuff():
 
 
 try:
-    # wifi = connect.do_connect()
-    # settime()
-    # cache_stuff()
+    wifi = connect.do_connect()
+    settime()
+    cache_stuff()
     s, clients = webserver.web_setup()
 
-    switch = Switch(config.switch)
-
     myalarm = Alarm(config.alarm_timeout_min * 60,
-                    config.motor, config.headlights, config.speaker, switch)
+                    config.motor, config.headlights, config.speaker)
 
-    def threads():
-        while not stop_threads:
-            config.motor.motor_thread_step()
-            config.headlights.headlight_thread_step()
-            time.sleep_us(1500)
 
-    _thread.start_new_thread(threads, ())
+
+    
     display_manager = mode.DisplayManager()
     home = Home(display_manager, myalarm, aliases.home)
     alarm = SetAlarm(display_manager, myalarm, aliases.set_alarm)
@@ -226,17 +230,25 @@ try:
 
         usb_prev_state = usb_power.value()
         loopcycles += 1
+        if loopcycles >= 50:
+            loopcycles = 0
+            gc.collect()
 
-        gc.collect()
-
+        # Overclock
+        if display_manager.current_state == aliases.home or display_manager.current_state == aliases.set_alarm:
+            machine.freq(config.boost_clock * 1_000_000)
+        else:
+            machine.freq(config.base_clock * 1_000_000)
         # debug stuff
         dur = display_manager.display_timer.get_remaining()
         done = display_manager.display_timer.finished()
         cycle_time = time.ticks_diff(time.ticks_ms(), start)
-        #print(dur, done, f'{gc.mem_free()/1000} KB')
-        #print(
-            #f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed}")
+        print(dur, done, f'{gc.mem_free()/1000} KB')
+        print(
+            f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed} clock: {machine.freq()/1_000_000} adc: {batvoltage.read_bat_voltage()}")
         home.looptime = cycle_time
+
+        # config.headlights.headlight_thread_step()
 
 except Exception as e:
     # TODO: add emergency alarm
