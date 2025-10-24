@@ -107,7 +107,7 @@ class Home(DisplayState):
         self.iconactive_wifi = False
         self.iconactive_battery = False
         self.iconactive_mail = False
-
+        self.v_battery = 0
     def clock(self):
         now = self.rtc.datetime()
         month = now[1]
@@ -214,7 +214,7 @@ class Home(DisplayState):
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
             self.motd_pos = 0
         else:
-            self.motd_pos += 1
+            self.motd_pos += config.msg_scroll_speed
 
         self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
                                self.motd, bally, rotate=180)
@@ -266,20 +266,21 @@ class Home(DisplayState):
             self.display.draw_sprite(self.plug_icon, x=x1, y=y1, w=8, h=8)
         elif now[6] % 2 == 0:
             self.iconactive_battery = True
-            v_battery = batvoltage.read_bat_voltage()
-            if v_battery >= 4.17:
+            
+            if self.v_battery >= 4.17:
                 self.display.draw_sprite(self.battery_full, x=x1, y=y1, w=8, h=8)
-            elif v_battery >= 4.08:
+            elif self.v_battery >= 4.08:
                 self.display.draw_sprite(self.battery_L4, x=x1, y=y1, w=8, h=8)
-            elif v_battery >= 4.00:
+            elif self.v_battery >= 4.00:
                 self.display.draw_sprite(self.battery_L3, x=x1, y=y1, w=8, h=8)
-            elif v_battery >= 3.92:
+            elif self.v_battery >= 3.92:
                 self.display.draw_sprite(self.battery_L2, x=x1, y=y1, w=8, h=8)
-            elif v_battery >= 3.83:
+            elif self.v_battery >= 3.83:
                 self.display.draw_sprite(self.battery_L1, x=x1, y=y1, w=8, h=8)
             else:
                 self.display.draw_sprite(self.battery_critical, x=x1, y=y1, w=8, h=8)
-
+        else:
+            self.v_battery = batvoltage.read_bat_voltage()
         # WiFi icons
         if network.WLAN(network.WLAN.IF_STA).isconnected():
             self.iconactive_wifi = True
