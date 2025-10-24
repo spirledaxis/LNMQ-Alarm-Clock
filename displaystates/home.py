@@ -34,6 +34,7 @@ class Home(DisplayState):
         self.motd_dir = 'l'
         self.motd = 'hello world'
         self.motd_mode = 'scroll'
+        self.bounce_firstime = True
 
         with open('motds.json', 'r') as f:
             motds_data = json.load(f)
@@ -220,6 +221,9 @@ class Home(DisplayState):
                                self.motd, bally, rotate=180)
 
     def bounce_motd(self):
+        if self.bounce_firstime:
+            self.motd_pos = 120
+            self.bounce_firstime = False
         motd_len = bally.measure_text(self.motd)
         if motd_len <= self.display.width:
             self.motd_pos = self.display.width // 2 + motd_len // 2
@@ -233,9 +237,9 @@ class Home(DisplayState):
                 self.motd_dir = 'l'
 
             if self.motd_dir == 'r':
-                self.motd_pos -= 1
+                self.motd_pos -= config.msg_scroll_speed
             elif self.motd_dir == 'l':
-                self.motd_pos += 1
+                self.motd_pos += config.msg_scroll_speed
 
         self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
                                self.motd, bally, rotate=180)
@@ -493,6 +497,8 @@ class Home(DisplayState):
 
         if self.motd_mode == 'scroll':
             self.scroll_motd()
+            self.bounce_firstime = True
+            
         elif self.motd_mode == 'bounce':
             self.bounce_motd()
 
