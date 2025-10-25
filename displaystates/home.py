@@ -93,7 +93,6 @@ class Home(DisplayState):
         self.battery_L4 = make_icon(
             [0x00, 0x7f, 0x5f, 0xdf, 0xdf, 0x5f, 0x7f, 0x00])
 
-
         self.blink_wifi_max = config.blink_wifi_max
         self.blinked_wifi = 0
         self.blink_wifi = False
@@ -109,6 +108,7 @@ class Home(DisplayState):
         self.iconactive_battery = False
         self.iconactive_mail = False
         self.v_battery = 0
+
     def clock(self):
         now = self.rtc.datetime()
         month = now[1]
@@ -270,9 +270,10 @@ class Home(DisplayState):
             self.display.draw_sprite(self.plug_icon, x=x1, y=y1, w=8, h=8)
         elif now[6] % 2 == 0:
             self.iconactive_battery = True
-            
+
             if self.v_battery >= 4.17:
-                self.display.draw_sprite(self.battery_full, x=x1, y=y1, w=8, h=8)
+                self.display.draw_sprite(
+                    self.battery_full, x=x1, y=y1, w=8, h=8)
             elif self.v_battery >= 4.08:
                 self.display.draw_sprite(self.battery_L4, x=x1, y=y1, w=8, h=8)
             elif self.v_battery >= 4.00:
@@ -282,7 +283,8 @@ class Home(DisplayState):
             elif self.v_battery >= 3.83:
                 self.display.draw_sprite(self.battery_L1, x=x1, y=y1, w=8, h=8)
             else:
-                self.display.draw_sprite(self.battery_critical, x=x1, y=y1, w=8, h=8)
+                self.display.draw_sprite(
+                    self.battery_critical, x=x1, y=y1, w=8, h=8)
         else:
             self.v_battery = batvoltage.read_bat_voltage()
         # WiFi icons
@@ -305,7 +307,6 @@ class Home(DisplayState):
         else:
             self.iconactive_mail = False
             self.display.fill_rectangle(x=x2, y=y1, w=8, h=8, invert=True)
-
 
     def draw_cube(self):
         # Function to multiply two matrices
@@ -421,10 +422,10 @@ class Home(DisplayState):
             self.alarm.stop()
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
             self.motd_mode = 'scroll'
-
-        self.blink_wifi = False
-        self.blinked_wifi = 0
-        self.display_manager.set_active_state(aliases.display_off)
+        else:
+            self.blink_wifi = False
+            self.blinked_wifi = 0
+            self.display_manager.set_active_state(aliases.display_off)
 
     def read_msg(self):
         print("reading message")
@@ -463,7 +464,6 @@ class Home(DisplayState):
         if self.alarm.is_active:
             self.alarm.stop(False)
             self.alarm.snooze()
-
 
         else:
             print("turning off light")
@@ -509,7 +509,6 @@ class Home(DisplayState):
             self.offset = 0
 
 
-
 if __name__ == '__main__':
     from displaystates import mode
 
@@ -518,9 +517,12 @@ if __name__ == '__main__':
     from config import motor, speaker, switch
     from hardware import Switch
     switch = Switch(switch)
-    alarm = Alarm(60, motor, 12, speaker, switch)
+    alarm = Alarm(60, motor, 12, speaker)
     home = Home(displaymanager, alarm, "test")
     displaymanager.display_states = [home]
     displaymanager.set_active_state("test")
     while True:
+        start = time.ticks_ms()
         displaymanager.run_current_state()
+        display_elapsed = time.ticks_diff(time.ticks_ms(), start)
+        print(display_elapsed)
