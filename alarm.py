@@ -3,7 +3,7 @@ from lib.neotimer import Neotimer
 import json
 from displaystates import aliases
 import motd_parser
-
+import config
 
 class Alarm:
     def __init__(self, timeout_s, motor, headlights, speaker):
@@ -96,14 +96,14 @@ class Alarm:
     def snooze(self):
         self.is_active = False
         self.snoozed = True
-        self.minute += 10
+        self.minute += config.snooze_min
         if self.minute > 60:
             self.hour += 1
             if self.hour > 23:
                 self.hour = 0
             self.minute = self.minute % 60
 
-    def stop(self):
+    def stop(self, undo_snooze=True):
         print("stopping...")
         if not self.is_active:
             print("attempted to stop alarm, but none was active")
@@ -115,7 +115,8 @@ class Alarm:
         self.is_active = False
         self.ringtone = self.original_ringtone
 
-        if self.snoozed:
+        #reset to the original time
+        if self.snoozed and undo_snooze:
             with open('alarm.json', 'r') as f:
                 data = json.load(f)
             
