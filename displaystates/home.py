@@ -22,7 +22,7 @@ class Home(DisplayState):
         self.button_map = [
             Button(config.alm_set, self.goto_alarm),
             Button(config.snze_l, self.on_snze),
-            Button(config.fwd, self.read_msg),
+            Button(config.fwd, self.on_fwd),
             Button(config.rev, self.on_rev),
             Button(config.snd_fx_l, self.on_snd_sfx),
             Button(config.clk_set, self.on_clk)
@@ -427,44 +427,46 @@ class Home(DisplayState):
             self.blinked_wifi = 0
             self.display_manager.set_active_state(aliases.display_off)
 
-    def read_msg(self):
-        print("reading message")
+    def on_fwd(self):
+
         if len(self.new_motds) == 0:
-            print("there are no new motds")
-            return
-
-        with open('motds.json', 'r') as f:
-            all_motds = json.load(f)
-
-        for motd in all_motds:
-            # set the read motd to new: false
-            if motd['id'] == self.new_motds[0]['id']:
-                print(motd, motd['id'], self.new_motds[0])
-                print("marked motd as read")
-                motd['new'] = False
-                break
+            self.motd_pos += config.scroll_on_fwd
         else:
-            print("there are no new motds (2)")
-            return
+            print("reading message")
+            with open('motds.json', 'r') as f:
+                all_motds = json.load(f)
 
-        motd = self.new_motds[0]
-        self.motd = f"{motd['motd']} @{motd['author']}"
-        self.motd_pos = 0
-        self.new_motds.pop(0)
+            for motd in all_motds:
+                # set the read motd to new: false
+                if motd['id'] == self.new_motds[0]['id']:
+                    print(motd, motd['id'], self.new_motds[0])
+                    print("marked motd as read")
+                    motd['new'] = False
+                    break
+            else:
+                raise ValueError("something went wrong when reading the message")
 
-        # update the json file so it says new: false
-        with open('motds.json', 'w') as f:
-            json.dump(all_motds, f)
+            motd = self.new_motds[0]
+            self.motd = f"{motd['motd']} @{motd['author']}"
+            self.motd_pos = 0
+            self.new_motds.pop(0)
 
-        # then, reload the data
-        with open('motds.json', 'r') as f:
-            self.motds_data = json.load(f)
+            # update the json file so it says new: false
+            with open('motds.json', 'w') as f:
+                json.dump(all_motds, f)
+
+            # then, reload the data
+            with open('motds.json', 'r') as f:
+                self.motds_data = json.load(f)
 
     def on_snze(self):
         if self.alarm.is_active:
             self.alarm.stop(False)
             self.alarm.snooze()
-
+            self.blink_wifi = False
+            self.blinked_wifi = 0
+            self.display_manager.set_active_state(aliases.display_off)
+            
         else:
             print("turning off light")
             try:
