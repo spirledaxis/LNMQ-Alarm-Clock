@@ -461,6 +461,7 @@ class Home(DisplayState):
 
     def on_snze(self):
         if self.alarm.is_active:
+            self.alarm.stop(False)
             self.alarm.snooze()
 
 
