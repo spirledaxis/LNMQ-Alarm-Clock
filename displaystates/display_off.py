@@ -9,7 +9,7 @@ from lib.neotimer import Neotimer
 import framebuf  # type: ignore
 from machine import Pin  # type: ignore
 import random
-
+from lib import batstats
 
 class DisplayOff(DisplayState):
     def __init__(self, display_manager, name):
@@ -42,7 +42,7 @@ class DisplayOff(DisplayState):
             if not self.display.on:
                 self.display.wake()
             self.display.draw_sprite(
-                self.battery_icon, self.bat_x, self.bat_y, w=8, h=8)
+                batstats.get_bat_sprite(), self.bat_x, self.bat_y, w=8, h=8)
         else:
             if self.display.on and not self.blink_wifi:
                 self.display.sleep()

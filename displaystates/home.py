@@ -14,7 +14,7 @@ import socket
 from displaystates import aliases
 import errno
 import time
-from lib import tmp117_temp, batvoltage
+from lib import batstats, tmp117_temp
 
 
 class Home(DisplayState):
@@ -79,20 +79,7 @@ class Home(DisplayState):
             [0x40, 0x20, 0x42, 0x05, 0x42, 0x20, 0x40], 7, 7)
         self.degree_symbol = make_icon([0x02, 0x05, 0x02], 3, 3)
 
-        # Battery level icons (8x8)
-        self.battery_critical = make_icon(
-            [0x00, 0x7f, 0x40, 0xfb, 0xfb, 0x40, 0x7f, 0x00])
-        self.battery_full = make_icon(
-            [0x00, 0x7f, 0x7f, 0xff, 0xff, 0x7f, 0x7f, 0x00])
-        self.battery_L1 = make_icon(
-            [0x00, 0x7f, 0x47, 0xc7, 0xc7, 0x47, 0x7f, 0x00])
-        self.battery_L2 = make_icon(
-            [0x00, 0x7f, 0x47, 0xc7, 0xc7, 0x47, 0x7f, 0x00])
-        self.battery_L3 = make_icon(
-            [0x00, 0x7f, 0x4f, 0xcf, 0xcf, 0x4f, 0x7f, 0x00])
-        self.battery_L4 = make_icon(
-            [0x00, 0x7f, 0x5f, 0xdf, 0xdf, 0x5f, 0x7f, 0x00])
-
+        
         self.blink_wifi_max = config.blink_wifi_max
         self.blinked_wifi = 0
         self.blink_wifi = False
@@ -167,7 +154,7 @@ class Home(DisplayState):
             3,
             3)
 
-    def draw_estimated_sleep(self):
+    def draw_sleep_temp(self):
         now = self.rtc.datetime()
         curr_hour = now[4]
         curr_minute = now[5]
@@ -197,7 +184,7 @@ class Home(DisplayState):
             self.display.draw_text(x, y, disp_str, bally_mini, rotate=180)
             self.display.draw_sprite(self.sleep_icon, x + 2, y + 1, 7, 7)
         else:
-            self.apply_offset = False
+            self.draw_temp()
 
     def on_rev(self):
         if self.motd_mode == 'scroll':
@@ -270,23 +257,8 @@ class Home(DisplayState):
             self.display.draw_sprite(self.plug_icon, x=x1, y=y1, w=8, h=8)
         elif now[6] % 2 == 0:
             self.iconactive_battery = True
+            self.display.draw_sprite(batstats.get_bat_sprite(), x=x1, y=y1, w=8, h=8) 
 
-            if self.v_battery >= 4.17:
-                self.display.draw_sprite(
-                    self.battery_full, x=x1, y=y1, w=8, h=8)
-            elif self.v_battery >= 4.08:
-                self.display.draw_sprite(self.battery_L4, x=x1, y=y1, w=8, h=8)
-            elif self.v_battery >= 4.00:
-                self.display.draw_sprite(self.battery_L3, x=x1, y=y1, w=8, h=8)
-            elif self.v_battery >= 3.92:
-                self.display.draw_sprite(self.battery_L2, x=x1, y=y1, w=8, h=8)
-            elif self.v_battery >= 3.83:
-                self.display.draw_sprite(self.battery_L1, x=x1, y=y1, w=8, h=8)
-            else:
-                self.display.draw_sprite(
-                    self.battery_critical, x=x1, y=y1, w=8, h=8)
-        else:
-            self.v_battery = batvoltage.read_bat_voltage()
         # WiFi icons
         if network.WLAN(network.WLAN.IF_STA).isconnected():
             self.iconactive_wifi = True
@@ -493,10 +465,9 @@ class Home(DisplayState):
     def main(self):
         # self.draw_cube()
         self.clock()
-        self.draw_estimated_sleep()
+        self.draw_sleep_temp()
         self.draw_icons()
         self.draw_looptime()
-        self.draw_temp()
 
         if self.motd_mode == 'scroll':
             self.scroll_motd()
