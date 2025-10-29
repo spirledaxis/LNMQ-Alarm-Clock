@@ -50,9 +50,6 @@ class Home(DisplayState):
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
         self.rtc = RTC()
         self.alarm = alarm
-        self.angle = 0
-        self.rotate_speed = 6
-        self.size = 15
         self.time_len = 0
 
         def make_icon(data, x=8, y=8):
@@ -96,6 +93,7 @@ class Home(DisplayState):
         self.iconactive_mail = False
         self.v_battery = 0
 
+
     def clock(self):
         now = self.rtc.datetime()
         month = now[1]
@@ -104,6 +102,7 @@ class Home(DisplayState):
         hour = now[4]
         minute = now[5]
         second = now[6]
+
 
         hour_ampm, _ = timeutils.convert_to_ampm(hour)
         time_text = f'{hour_ampm}:{minute:02}'
@@ -143,16 +142,10 @@ class Home(DisplayState):
         tempurature = tmp117_temp.read_tmp117_temp()
         tempurature = round(tempurature, 1)
         self.display.draw_text(x, y, f'{tempurature}', bally_mini, rotate=180)
-        self.display.draw_sprite(
-            self.degree_symbol,
-            x -
-            bally_mini.measure_text(f'{tempurature}') -
-            5,
-            y +
-            bally_mini.height //
-            2,
-            3,
-            3)
+        self.display.draw_sprite(self.degree_symbol, 
+                                 x - bally_mini.measure_text(f'{tempurature}') - 5, 
+                                 y + bally_mini.height // 2, 
+                                 3, 3)
 
     def draw_sleep_temp(self):
         now = self.rtc.datetime()
@@ -280,109 +273,6 @@ class Home(DisplayState):
             self.iconactive_mail = False
             self.display.fill_rectangle(x=x2, y=y1, w=8, h=8, invert=True)
 
-    def draw_cube(self):
-        # Function to multiply two matrices
-        def MatrixMul(matrixA, matrixB):
-            # Create a result matrix filled with zeros
-            result = [[0 for _ in range(len(matrixB[0]))]
-                      for _ in range(len(matrixA))]
-
-            # Perform matrix multiplication
-            for row in range(len(matrixA)):
-                for col in range(len(matrixB[0])):
-                    for k in range(len(matrixB)):
-                        result[row][col] += matrixA[row][k] * matrixB[k][col]
-
-            return result
-
-        # Define the cube's vertices
-        points = [
-            [[-self.size / 2], [self.size / 2], [self.size / 2]],
-            [[self.size / 2], [self.size / 2], [self.size / 2]],
-            [[self.size / 2], [-self.size / 2], [self.size / 2]],
-            [[-self.size / 2], [-self.size / 2], [self.size / 2]],
-
-            [[-self.size / 2], [self.size / 2], [-self.size / 2]],
-            [[self.size / 2], [self.size / 2], [-self.size / 2]],
-            [[self.size / 2], [-self.size / 2], [-self.size / 2]],
-            [[-self.size / 2], [-self.size / 2], [-self.size / 2]],
-        ]
-
-        # Function to calculate the X-axis rotation matrix
-        def Xrotation(angle):
-            radDegree = angle * math.pi / 180  # Convert angle to radians
-            return [
-                [1, 0, 0],
-                [0, math.cos(radDegree), -math.sin(radDegree)],
-                [0, math.sin(radDegree), math.cos(radDegree)]
-            ]
-
-        # Function to calculate the Z-axis rotation matrix
-        def Zrotation(angle):
-            radDegree = angle * math.pi / 180  # Convert angle to radians
-            return [
-                [math.cos(radDegree), -math.sin(radDegree), 0],
-                [math.sin(radDegree), math.cos(radDegree), 0],
-                [0, 0, 1]
-            ]
-
-        # Function to calculate the Y-axis rotation matrix
-        def Yrotation(angle):
-            radDegree = angle * math.pi / 180  # Convert angle to radians
-            return [
-                [math.cos(radDegree), 0, math.sin(radDegree)],
-                [0, 1, 0],
-                [-math.sin(radDegree), 0, math.cos(radDegree)]
-            ]
-
-        # Define the connections (edges) between vertices
-        connections = [
-            (0, 1), (1, 2), (2, 3), (3, 0),  # Front face
-            (4, 5), (5, 6), (6, 7), (7, 4),  # Back face
-            (0, 4), (1, 5), (2, 6), (3, 7),  # Edges connecting front and back
-        ]
-
-        # List to store the rotated and projected points
-        rotatedPoints = []
-
-        # Rotate and project each point (vertex) in 3D space
-        for point in points:
-            # Apply X, Y, and Z rotations
-            rotated = MatrixMul(Xrotation(self.angle), point)
-            rotated = MatrixMul(Yrotation(self.angle), rotated)
-            rotated = MatrixMul(Zrotation(self.angle), rotated)
-
-            # Calculate perspective projection
-            z = 200 / (200 - rotated[2][0])
-            perspective = [
-                [z, 0, 0],
-                [0, z, 0],
-            ]
-            # Apply perspective projection
-            projected = MatrixMul(perspective, rotated)
-            rotatedPoints.append(projected)  # Save the projected point
-
-        # Draw edges between the points
-        pointX = int(self.display.width -
-                     ((self.display.width - self.time_len) // 4))
-        pointY = int(self.display.height // 2 + 2)
-        for start, end in connections:
-            startPoint = rotatedPoints[start]  # Start vertex
-            endPoint = rotatedPoints[end]  # End vertex
-
-            # Displace points to be in the middle of the screen
-            startX = int(startPoint[0][0] + pointX)
-            startY = int(startPoint[1][0] + pointY)
-            endX = int(endPoint[0][0] + pointX)
-            endY = int(endPoint[1][0] + pointY)
-
-            # Draw the edge as a line
-            self.display.draw_line(startX, startY, endX, endY)
-            # Increment the rotation angle for continuous rotation
-
-        self.angle += self.rotate_speed * random.random()
-        if self.angle > 360:
-            self.angle = 0
 
     def goto_alarm(self):
         self.blink_wifi = False
@@ -463,7 +353,6 @@ class Home(DisplayState):
         self.display_manager.set_active_state(aliases.message_reader)
 
     def main(self):
-        # self.draw_cube()
         self.clock()
         self.draw_sleep_temp()
         self.draw_icons()
