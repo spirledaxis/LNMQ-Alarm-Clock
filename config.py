@@ -86,5 +86,4 @@ msg_scroll_speed = 1
 snooze_min = 10
 scroll_on_fwd = 20
 #in MHZ
-base_clock = 125
-boost_clock = 200
+

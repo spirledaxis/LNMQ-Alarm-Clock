@@ -19,7 +19,7 @@ import webserver
 import motd_parser
 from lib.neotimer import Neotimer
 from lib.ntptime import settime
-from lib import batvoltage
+from lib import batstats
 import lib.connect as connect
 import displaystates.mode as mode
 import socket
@@ -28,7 +28,17 @@ import time
 from machine import RTC  # type: ignore
 from utime import sleep_ms, sleep_us  # type: ignore
 import machine #type: ignore
+from machine import ADC
 
+def read_temp():
+    sensor_temp = ADC(4)
+    conversion_factor = 3.3 / 65535  # 16-bit ADC scaling
+
+   
+    reading = sensor_temp.read_u16() * conversion_factor
+    temperature = 27 - (reading - 0.706) / 0.001721
+    return temperature
+   
 
 def headlight_thread():
     while not stop_threads:
@@ -158,11 +168,12 @@ try:
     lock_ntptime = False
     config.display.set_contrast(0)
 
-    # # alarm testing
-
+    now = rtc.datetime()
+    # alarm testing
+    
     # myalarm.hour = now[4]
     # myalarm.minute = now[5]
-    now = rtc.datetime()
+
     print(now)
 
     if usb_power.value() == 0:
@@ -234,18 +245,11 @@ try:
             loopcycles = 0
             gc.collect()
 
-        # Overclock
-        if display_manager.current_state == aliases.home or display_manager.current_state == aliases.set_alarm:
-            machine.freq(config.boost_clock * 1_000_000)
-        else:
-            machine.freq(config.base_clock * 1_000_000)
         # debug stuff
         dur = display_manager.display_timer.get_remaining()
         done = display_manager.display_timer.finished()
         cycle_time = time.ticks_diff(time.ticks_ms(), start)
-        print(dur, done, f'{gc.mem_free()/1000} KB')
-        print(
-            f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed} clock: {machine.freq()/1_000_000} adc: {batvoltage.read_bat_voltage()}")
+        print(f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed}, clock: {machine.freq()/1_000_000}, adc: {batstats.read_bat_voltage()}, mem: {gc.mem_free()/1000} KB, internal temp: {read_temp()}", end="\r")
         home.looptime = cycle_time
 
         # config.headlights.headlight_thread_step()
