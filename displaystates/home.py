@@ -188,9 +188,11 @@ class Home(DisplayState):
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
             self.motd_mode = 'scroll'
 
-    def reset_motd(self):
+    def reset_motd(self, motd=None):
         while self.motd == self.prev_motd:
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+        if motd:
+            self.motd = motd
         self.prev_motd = self.motd
         self.motd_len = bally.measure_text(self.motd)
         self.motd_pos = 0 
@@ -349,10 +351,11 @@ class Home(DisplayState):
             else:
                 raise ValueError(
                     "something went wrong when reading the message")
-
+            
             motd = self.new_motds[0]
-            self.motd = f"{motd['motd']} @{motd['author']}"
-            self.motd_pos = 0
+            motd = f"{motd['motd']} @{motd['author']}"
+
+            self.reset_motd(motd)
             self.new_motds.pop(0)
 
             # update the json file so it says new: false
