@@ -28,11 +28,11 @@ class Home(DisplayState):
             Button(config.clk_set, self.on_clk)
         ]
         super().__init__(self.button_map, name, display_manager)
-
         self.display_manager = display_manager
-        self.motd_pos = 0
+
+        self.motd = ''
+        self.prev_motd = ''
         self.motd_dir = 'l'
-        self.motd = 'hello world'
         self.motd_mode = 'scroll'
         self.bounce_firstime = True
 
@@ -40,6 +40,7 @@ class Home(DisplayState):
             motds_data = json.load(f)
         self.motds_data = motds_data
         self.new_motds = []
+        self.reset_motd()
         for motd_json in motds_data:
             if motd_json['new'] is True:
                 print('found an new motd')
@@ -76,7 +77,6 @@ class Home(DisplayState):
             [0x40, 0x20, 0x42, 0x05, 0x42, 0x20, 0x40], 7, 7)
         self.degree_symbol = make_icon([0x02, 0x05, 0x02], 3, 3)
 
-        
         self.blink_wifi_max = config.blink_wifi_max
         self.blinked_wifi = 0
         self.blink_wifi = False
@@ -93,7 +93,6 @@ class Home(DisplayState):
         self.iconactive_mail = False
         self.v_battery = 0
 
-
     def clock(self):
         now = self.rtc.datetime()
         month = now[1]
@@ -102,7 +101,6 @@ class Home(DisplayState):
         hour = now[4]
         minute = now[5]
         second = now[6]
-
 
         hour_ampm, _ = timeutils.convert_to_ampm(hour)
         time_text = f'{hour_ampm}:{minute:02}'
@@ -142,9 +140,10 @@ class Home(DisplayState):
         tempurature = tmp117_temp.read_tmp117_temp()
         tempurature = round(tempurature, 1)
         self.display.draw_text(x, y, f'{tempurature}', bally_mini, rotate=180)
-        self.display.draw_sprite(self.degree_symbol, 
-                                 x - bally_mini.measure_text(f'{tempurature}') - 5, 
-                                 y + bally_mini.height // 2, 
+        self.display.draw_sprite(self.degree_symbol,
+                                 x -
+                                 bally_mini.measure_text(f'{tempurature}') - 5,
+                                 y + bally_mini.height // 2,
                                  3, 3)
 
     def draw_sleep_temp(self):
@@ -189,16 +188,58 @@ class Home(DisplayState):
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
             self.motd_mode = 'scroll'
 
-    def scroll_motd(self):
-        motd_len = bally.measure_text(self.motd)
-        if self.motd_pos >= motd_len + self.display.width + 10:
+    def reset_motd(self):
+        while self.motd == self.prev_motd:
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
-            self.motd_pos = 0
+        self.prev_motd = self.motd
+        self.motd_len = bally.measure_text(self.motd)
+        self.motd_pos = 0 
+        self.motd_pos_noadj = 0 # doesn't get subtracted for adjustments
+        self.split_motd_add = iter(list(self.motd))
+        self.split_motd_remove = iter(list(self.motd))
+        self.partial_motd = ''
+        self.overshoot_motd = ''
+        self.overshot_motd_prev = ''
+
+    def scroll_motd(self):
+        """scroll self.motd across the screen.
+        Only renders visibible text."""
+
+        if self.motd_pos_noadj >= self.motd_len + self.display.width + 10:
+            self.reset_motd()
         else:
             self.motd_pos += config.msg_scroll_speed
+            self.motd_pos_noadj += config.msg_scroll_speed
+        # builds the motd as it comes from the right
+        while bally.measure_text(self.partial_motd) < self.motd_pos:
+            try:
+                self.partial_motd += next(self.split_motd_add)
+            except StopIteration:
+                break
+        # removes motd past the left edge
+        while self.motd_pos_noadj - bally.measure_text(self.overshoot_motd) >= 128 + 10 and self.motd_pos > 128:
+            try:
+                self.overshoot_motd += next(self.split_motd_remove)
 
+            except StopIteration:
+                break
+        # apply overshoot
+        # if self.overshoot_motd != '':
+        #     self.partial_motd = self.motd.replace(self.overshoot_motd, '')
+        # subtract motd_pos based on characters removed to keep it smooth
+        if self.overshoot_motd != self.overshot_motd_prev:
+
+            self.partial_motd = self.partial_motd[1:]
+            print(type(self.overshoot_motd))
+            overshot_diff = self.overshoot_motd.replace(self.overshot_motd_prev, '', 1)
+            self.motd_pos -= bally.measure_text(overshot_diff)
+        
         self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
-                               self.motd, bally, rotate=180)
+                               self.partial_motd, bally, rotate=180)
+
+        print(
+            f"rending '{self.partial_motd}' at {self.motd_pos} overshot = '{self.overshoot_motd}'")
+        self.overshot_motd_prev = self.overshoot_motd
 
     def bounce_motd(self):
         if self.bounce_firstime:
@@ -250,7 +291,8 @@ class Home(DisplayState):
             self.display.draw_sprite(self.plug_icon, x=x1, y=y1, w=8, h=8)
         elif now[6] % 2 == 0:
             self.iconactive_battery = True
-            self.display.draw_sprite(batstats.get_bat_sprite(), x=x1, y=y1, w=8, h=8) 
+            self.display.draw_sprite(
+                batstats.get_bat_sprite(), x=x1, y=y1, w=8, h=8)
 
         # WiFi icons
         if network.WLAN(network.WLAN.IF_STA).isconnected():
@@ -272,7 +314,6 @@ class Home(DisplayState):
         else:
             self.iconactive_mail = False
             self.display.fill_rectangle(x=x2, y=y1, w=8, h=8, invert=True)
-
 
     def goto_alarm(self):
         self.blink_wifi = False
@@ -306,7 +347,8 @@ class Home(DisplayState):
                     motd['new'] = False
                     break
             else:
-                raise ValueError("something went wrong when reading the message")
+                raise ValueError(
+                    "something went wrong when reading the message")
 
             motd = self.new_motds[0]
             self.motd = f"{motd['motd']} @{motd['author']}"
@@ -328,7 +370,7 @@ class Home(DisplayState):
             self.blink_wifi = False
             self.blinked_wifi = 0
             self.display_manager.set_active_state(aliases.display_off)
-            
+
         else:
             print("turning off light")
             try:
