@@ -19,6 +19,7 @@ class SetAlarm(DisplayState):
             Button(config.clk_set, self.goto_midpoint),
             RepeatButton(config.fwd, self.on_fwd),
             RepeatButton(config.rev, self.on_rev),
+            RepeatButton(config.snd_fx_l, self.on_selection)
         ]
         super().__init__(self.button_map, name, display_manager)
         with open('alarm.json', 'r') as f:
