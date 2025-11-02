@@ -25,16 +25,16 @@ def read_bat_voltage():
 
 def get_bat_sprite():
     v_battery = read_bat_voltage()
-    if v_battery >= 4.17:
+    if v_battery >= 3.95:
        return battery_full
-    elif v_battery >= 4.08:
+    elif v_battery >= 3.81:
         return battery_L4
-    elif v_battery >= 4.00:
+    elif v_battery >= 3.75:
         return battery_L3
-    elif v_battery >= 3.92:
-        return battery_L2   
-    elif v_battery >= 3.83:
-        return battery_L1
+    elif v_battery >= 3.68:
+        return battery_L1   
+    # elif v_battery >= 3.83:
+    #     return battery_L1
     else:
         return battery_critical
             
