@@ -14,7 +14,7 @@ import socket
 from displaystates import aliases
 import errno
 import time
-from lib import batstats, tmp117_temp
+from lib import batstats, tmp117_temp, ntptime
 
 
 class Home(DisplayState):
@@ -104,7 +104,7 @@ class Home(DisplayState):
 
         hour_ampm, _ = timeutils.convert_to_ampm(hour)
         time_text = f'{hour_ampm}:{minute:02}'
-        time_len = timefont.measure_text(time_text)
+        self.time_len = timefont.measure_text(time_text)
 
         self.time_len = timefont.measure_text(time_text)
         date_text = f'{timeutils.daynum_to_daystr(day_name_int)} | {timeutils.monthnum_to_monthstr(month)} {month_day}'
@@ -116,7 +116,7 @@ class Home(DisplayState):
         # origin is in the bottom right
 
         # Display the time
-        self.display.draw_text((self.display.width + time_len) // 2 + self.offset, self.display.height // 2 - timefont.height // 2,
+        self.display.draw_text((self.display.width + self.time_len) // 2 + self.offset, self.display.height // 2 - timefont.height // 2,
                                time_text, timefont, rotate=180)
 
         # display weekday, month, and mday
@@ -195,8 +195,8 @@ class Home(DisplayState):
             self.motd = motd
         self.prev_motd = self.motd
         self.motd_len = bally.measure_text(self.motd)
-        self.motd_pos = 0 
-        self.motd_pos_noadj = 0 # doesn't get subtracted for adjustments
+        self.motd_pos = 0
+        self.motd_pos_noadj = 0  # doesn't get subtracted for adjustments
         self.split_motd_add = iter(list(self.motd))
         self.split_motd_remove = iter(list(self.motd))
         self.partial_motd = ''
@@ -206,7 +206,7 @@ class Home(DisplayState):
     def scroll_motd(self):
         """scroll self.motd across the screen.
         Only renders visibible text."""
-
+        # TODO: make it work with the forward button
         if self.motd_pos_noadj >= self.motd_len + self.display.width + 10:
             self.reset_motd()
         else:
@@ -232,15 +232,14 @@ class Home(DisplayState):
         if self.overshoot_motd != self.overshot_motd_prev:
 
             self.partial_motd = self.partial_motd[1:]
-            print(type(self.overshoot_motd))
-            overshot_diff = self.overshoot_motd.replace(self.overshot_motd_prev, '', 1)
+            overshot_diff = self.overshoot_motd.replace(
+                self.overshot_motd_prev, '', 1)
             self.motd_pos -= bally.measure_text(overshot_diff)
-        
+
         self.display.draw_text(self.motd_pos, ((self.display.height // 2) + timefont.height // 2) + bally.height // 2 - 2,
                                self.partial_motd, bally, rotate=180)
 
-        print(
-            f"rending '{self.partial_motd}' at {self.motd_pos} overshot = '{self.overshoot_motd}'")
+       # print(f"rending '{self.partial_motd}' at {self.motd_pos} overshot = '{self.overshoot_motd}'", end='\r')
         self.overshot_motd_prev = self.overshoot_motd
 
     def bounce_motd(self):
@@ -336,6 +335,7 @@ class Home(DisplayState):
 
         if len(self.new_motds) == 0:
             self.motd_pos += config.scroll_on_fwd
+            self.motd_pos_noadj += config.scroll_on_fwd
         else:
             print("reading message")
             with open('motds.json', 'r') as f:
@@ -351,7 +351,7 @@ class Home(DisplayState):
             else:
                 raise ValueError(
                     "something went wrong when reading the message")
-            
+
             motd = self.new_motds[0]
             motd = f"{motd['motd']} @{motd['author']}"
 
@@ -398,6 +398,7 @@ class Home(DisplayState):
         self.display_manager.set_active_state(aliases.message_reader)
 
     def main(self):
+
         self.clock()
         self.draw_sleep_temp()
         self.draw_icons()
@@ -414,6 +415,8 @@ class Home(DisplayState):
             self.offset = self.offset_val
         else:
             self.offset = 0
+
+
 
 
 if __name__ == '__main__':

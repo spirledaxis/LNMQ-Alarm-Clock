@@ -90,6 +90,30 @@ def is_dst_pacific(t):
 
     return dst_start_utc <= utc_sec < dst_end_utc
 
+def dst_change_soon_pacific(t):
+    """Return 1 if DST will start soon, -1 if DST will end soon, else 0."""
+    year = t[0]
+    utc_sec = time.mktime(t)
+
+    # DST start (second Sunday in March at 10:00 UTC)
+    dst_start_day = second_sunday_in_march(year)
+    dst_start_utc = time.mktime((year, 3, dst_start_day, 10, 0, 0, 0, 0))
+
+    # DST end (first Sunday in November at 9:00 UTC)
+    dst_end_day = first_sunday_in_november(year)
+    dst_end_utc = time.mktime((year, 11, dst_end_day, 9, 0, 0, 0, 0))
+
+    one_day = 24 * 60 * 60
+
+    if dst_start_utc - one_day <= utc_sec < dst_start_utc:
+        # One day before clocks move forward
+        return 1
+    elif dst_end_utc - one_day <= utc_sec < dst_end_utc:
+        # One day before clocks move back
+        return -1
+    else:
+        return 0
+    
 
 def settime():
     t = get_time()  # UTC time in seconds
