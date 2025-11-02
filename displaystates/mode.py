@@ -57,7 +57,6 @@ class DisplayManager:
         for button in self.current_state_obj.button_map:
             button.update()
             if button.pressed:
-                print("resetting display time via button press")
                 self.display_timer.restart()
 
         self.switch.update()
