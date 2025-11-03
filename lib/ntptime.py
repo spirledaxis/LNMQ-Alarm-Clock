@@ -91,28 +91,32 @@ def is_dst_pacific(t):
     return dst_start_utc <= utc_sec < dst_end_utc
 
 def dst_change_soon_pacific(t):
-    """Return 1 if DST will start soon, -1 if DST will end soon, else 0."""
+    """Return 1 if DST will start soon, -1 if DST will end soon, else 0.
+       Takes a local Pacific time tuple from the Pico RTC."""
+    import time
+
     year = t[0]
-    utc_sec = time.mktime(t)
+    utc_sec = time.mktime(t)  # your local Pacific time (not UTC)
 
-    # DST start (second Sunday in March at 10:00 UTC)
+    # DST starts: second Sunday in March at 2:00 a.m. local time (PST → PDT)
     dst_start_day = second_sunday_in_march(year)
-    dst_start_utc = time.mktime((year, 3, dst_start_day, 10, 0, 0, 0, 0))
+    dst_start_local = time.mktime((year, 3, dst_start_day, 2, 0, 0, 0, 0))
 
-    # DST end (first Sunday in November at 9:00 UTC)
+    # DST ends: first Sunday in November at 2:00 a.m. local time (PDT → PST)
     dst_end_day = first_sunday_in_november(year)
-    dst_end_utc = time.mktime((year, 11, dst_end_day, 9, 0, 0, 0, 0))
+    dst_end_local = time.mktime((year, 11, dst_end_day, 2, 0, 0, 0, 0))
 
     one_day = 24 * 60 * 60
 
-    if dst_start_utc - one_day <= utc_sec < dst_start_utc:
+    if dst_start_local - one_day <= utc_sec < dst_start_local:
         # One day before clocks move forward
         return 1
-    elif dst_end_utc - one_day <= utc_sec < dst_end_utc:
+    elif dst_end_local - one_day <= utc_sec < dst_end_local:
         # One day before clocks move back
         return -1
     else:
         return 0
+
     
 
 def settime():

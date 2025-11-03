@@ -1,51 +1,42 @@
 import config
-import framebuf #type: ignore
+import framebuf  # type: ignore
 from bigicons import *
 booticon = framebuf.FrameBuffer(
     booticon, 128, 64, framebuf.MONO_VLSB)
 config.display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
 config.display.present()
 
-import io
-from machine import Pin  # type: ignore
-import gc
-import framebuf  # type: ignore
-from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases
-import errno
-from config import display
-import json
-from alarm import Alarm
-import webserver
-import motd_parser
-from lib.neotimer import Neotimer
-from lib.ntptime import settime
-from lib import batstats
-import lib.connect as connect
-import displaystates.mode as mode
-import socket
-import _thread
-import time
-from machine import RTC  # type: ignore
+import machine  # type: ignore
+from machine import ADC # type: ignore
 from utime import sleep_ms, sleep_us  # type: ignore
-import machine #type: ignore
-from machine import ADC
+from machine import RTC  # type: ignore
+import time
+import socket
+import lib.connect as connect
+from lib import batstats
+from lib.ntptime import settime
+from lib.neotimer import Neotimer
+import motd_parser
+import webserver
+from alarm import Alarm
+import json
+import errno
+from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases, mode
+import framebuf  # type: ignore
+import gc
+from machine import Pin  # type: ignore
+import io
+from config import display
 
-def read_temp():
+def read_internal_temp():
     sensor_temp = ADC(4)
     conversion_factor = 3.3 / 65535  # 16-bit ADC scaling
 
-   
     reading = sensor_temp.read_u16() * conversion_factor
     temperature = 27 - (reading - 0.706) / 0.001721
     return temperature
-   
 
-def headlight_thread():
-    while not stop_threads:
-        config.headlights.run()
-        sleep_us(500)
 
-stop_threads = False
 booticon_warning = framebuf.FrameBuffer(
     booticon_warning, 128, 64, framebuf.MONO_VLSB)
 
@@ -53,8 +44,7 @@ usb_power = Pin('WL_GPIO2', Pin.IN)
 usb_prev_state = None
 
 rtc = RTC()
-mhz = 200
-# machine.freq(mhz * 1_000_000)
+
 print(machine.freq())
 
 
@@ -152,9 +142,6 @@ try:
     myalarm = Alarm(config.alarm_timeout_min * 60,
                     config.motor, config.headlights, config.speaker)
 
-
-
-    
     display_manager = mode.DisplayManager()
     home = Home(display_manager, myalarm, aliases.home)
     alarm = SetAlarm(display_manager, myalarm, aliases.set_alarm)
@@ -170,7 +157,7 @@ try:
 
     now = rtc.datetime()
     # alarm testing
-    
+
     # myalarm.hour = now[4]
     # myalarm.minute = now[5]
 
@@ -220,17 +207,22 @@ try:
         # ntp
         hour = now[4]
         minute = now[5]
-        if hour == 2 + 12 and minute == 5 and not lock_ntptime:
+        if hour == 2 and minute == 1 and not lock_ntptime:
             lock_ntptime = True
             try:
                 settime()
-                cache_stuff()
             except Exception:
-                print("couldn't set the time and/or fetch cache")
+                print("couldn't set the time via ntp")
             else:
                 print("setting time via ntp and fetching cache")
+            try:
+                cache_stuff()
+            except Exception:
+                print("couldn't fetch the cache")
+            else:
+                print("fetched cache")
 
-        elif minute != 5:
+        elif minute != 1:
             lock_ntptime = False
 
         if usb_power.value() == 0 and usb_prev_state == 1:
@@ -249,10 +241,8 @@ try:
         dur = display_manager.display_timer.get_remaining()
         done = display_manager.display_timer.finished()
         cycle_time = time.ticks_diff(time.ticks_ms(), start)
-        print(f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed}, clock: {machine.freq()/1_000_000}, adc: {batstats.read_bat_voltage()}, mem: {gc.mem_free()/1000} KB, internal temp: {read_temp()}", end="\r")
+        print(f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed}, clock: {machine.freq()/1_000_000}, adc: {batstats.read_bat_voltage()}, mem: {gc.mem_free()/1000} KB, internal temp: {read_internal_temp()}", end="\r")
         home.looptime = cycle_time
-
-        # config.headlights.headlight_thread_step()
 
 except Exception as e:
     # TODO: add emergency alarm

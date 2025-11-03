@@ -397,13 +397,35 @@ class Home(DisplayState):
         self.blinked_wifi = 0
         self.display_manager.set_active_state(aliases.message_reader)
 
+    def dst_warning(self):
+        hour = self.rtc.datetime()[4]
+        hour, _ = timeutils.convert_to_ampm(hour)
+        arrow_len = timefont.measure_text(str(hour))
+        arrow_x = ((self.display.width + self.time_len) // 2) - arrow_len + self.offset
+        arrow_y = self.display.height // 2 - timefont.height // 2
+        if ntptime.dst_change_soon_pacific(self.rtc.datetime()) == 1:
+            self.display.draw_hline(arrow_x, arrow_y, arrow_len)
+            self.display.draw_pixel(arrow_x - 3, arrow_y)
+            self.display.draw_pixel(arrow_x - 2, arrow_y + 1)
+            self.display.draw_pixel(arrow_x - 2, arrow_y - 1)
+            self.display.draw_pixel(arrow_x - 1, arrow_y + 2)
+            self.display.draw_pixel(arrow_x - 1, arrow_y - 2)
+        elif ntptime.dst_change_soon_pacific(self.rtc.datetime()) == -1:
+            self.display.draw_hline(arrow_x, arrow_y, arrow_len)
+            arrow_x = ((self.display.width + self.time_len) // 2)
+            self.display.draw_pixel(arrow_x + 3, arrow_y)
+            self.display.draw_pixel(arrow_x + 2, arrow_y + 1)
+            self.display.draw_pixel(arrow_x + 2, arrow_y - 1)
+            self.display.draw_pixel(arrow_x + 1, arrow_y + 2)
+            self.display.draw_pixel(arrow_x + 1, arrow_y - 2)
+
     def main(self):
 
         self.clock()
         self.draw_sleep_temp()
         self.draw_icons()
         self.draw_looptime()
-
+        self.dst_warning()
         if self.motd_mode == 'scroll':
             self.scroll_motd()
             self.bounce_firstime = True
@@ -417,11 +439,9 @@ class Home(DisplayState):
             self.offset = 0
 
 
-
-
 if __name__ == '__main__':
     from displaystates import mode
-
+    import machine  # type: ignore
     from alarm import Alarm
     displaymanager = mode.DisplayManager()
     from config import motor, speaker, switch
@@ -431,6 +451,7 @@ if __name__ == '__main__':
     home = Home(displaymanager, alarm, "test")
     displaymanager.display_states = [home]
     displaymanager.set_active_state("test")
+    machine.RTC().datetime((2025, 11, 1, 5, 23, 0, 0, 0))
     while True:
         start = time.ticks_ms()
         displaymanager.run_current_state()
