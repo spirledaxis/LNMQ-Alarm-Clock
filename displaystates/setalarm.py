@@ -1,25 +1,24 @@
-from displaystates import aliases
-from displaystates.mode import DisplayState, timefont, bally
+from mode import DisplayState
 from hardware import Button, RepeatButton
 import config
 import json
-from lib import timeutils
-from time import sleep_ms
-import framebuf  # type: ignore
-
+from . import bally, timefont
+import framebuf #type: ignore
+import aliases
+from utils import timeutils
 
 class SetAlarm(DisplayState):
     def __init__(self, display_manager, alarm, name):
         self.button_map = [
             Button(config.fwd, self.on_fwd),
             Button(config.rev, self.on_rev),
-            Button(config.alm_set, self.on_exit),
-            Button(config.snd_fx_l, self.on_selection),
-            Button(config.snze_l, self.preview),
-            Button(config.clk_set, self.goto_midpoint),
+            Button(config.alm_set, self.on_alm_set),
+            Button(config.snd_fx_l, self.on_snd_fx_l),
+            Button(config.snze_l, self.on_snze_l),
+            Button(config.clk_set, self.on_clk_set),
             RepeatButton(config.fwd, self.on_fwd),
             RepeatButton(config.rev, self.on_rev),
-            RepeatButton(config.snd_fx_l, self.on_selection)
+            RepeatButton(config.snd_fx_l, self.on_snd_fx_l)
         ]
         super().__init__(self.button_map, name, display_manager)
         with open('alarm.json', 'r') as f:
@@ -132,7 +131,7 @@ class SetAlarm(DisplayState):
         elif self.selection == 'bell':
             self.alarm_active = not self.alarm_active
 
-    def preview(self):
+    def on_snze_l(self):
         if not config.speaker.queryBusy():
             self.motor.set_movement_by_ringtone(self.ringtone_index)
             config.speaker.setVolume(self.volume)
@@ -145,7 +144,7 @@ class SetAlarm(DisplayState):
             #self.motor.stop()
             config.headlights.stop()
 
-    def goto_midpoint(self):
+    def on_clk_set(self):
         if self.selection == 'minute':
             self.minute = 30
         elif self.selection == 'hour':
@@ -160,7 +159,7 @@ class SetAlarm(DisplayState):
         elif self.selection == 'volume':
             self.volume = 15
 
-    def on_exit(self):
+    def on_alm_set(self):
         with open('alarm.json', 'r') as f:
             alarm_msg = json.load(f)['alarm_message']
 
@@ -191,7 +190,7 @@ class SetAlarm(DisplayState):
         self.display_manager.set_active_state(aliases.home)
         self.motor.ready = False
 
-    def on_selection(self):
+    def on_snd_fx_l(self):
         self.edit_index = (self.edit_index + 1) % len(self.edit_options)
         self.selection = self.edit_options[self.edit_index]
 

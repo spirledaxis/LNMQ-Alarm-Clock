@@ -1,146 +1,38 @@
 import config
 import framebuf  # type: ignore
 from bigicons import *
+import machine #type: ignore
+from machine import RTC, Pin #type: ignore
+from utils import fetch_cache, connect, motd_parser, tempuratures, batstats, http_get
+from lib import settime, Neotimer
+from displaystates import Home, mode, aliases, SetAlarm, MessageViewer, DisplayOff
+import webserver
+import time
+import json
+import io
+from alarm import Alarm
+import gc
+from hardware import display
+
 booticon = framebuf.FrameBuffer(
     booticon, 128, 64, framebuf.MONO_VLSB)
-config.display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
-config.display.present()
-
-import machine  # type: ignore
-from machine import ADC # type: ignore
-from utime import sleep_ms, sleep_us  # type: ignore
-from machine import RTC  # type: ignore
-import time
-import socket
-import lib.connect as connect
-from lib import batstats
-from lib.ntptime import settime
-from lib.neotimer import Neotimer
-import motd_parser
-import webserver
-from alarm import Alarm
-import json
-import errno
-from displaystates import Home, DisplayOff, MessageViewer, SetAlarm, aliases, mode
-import framebuf  # type: ignore
-import gc
-from machine import Pin  # type: ignore
-import io
-from config import display
-
-def read_internal_temp():
-    sensor_temp = ADC(4)
-    conversion_factor = 3.3 / 65535  # 16-bit ADC scaling
-
-    reading = sensor_temp.read_u16() * conversion_factor
-    temperature = 27 - (reading - 0.706) / 0.001721
-    return temperature
-
-
-booticon_warning = framebuf.FrameBuffer(
-    booticon_warning, 128, 64, framebuf.MONO_VLSB)
-
-usb_power = Pin('WL_GPIO2', Pin.IN)
-usb_prev_state = None
-
-rtc = RTC()
-
-print(machine.freq())
-
-
-def http_get(host, port, path):
-    addr = socket.getaddrinfo(host, port)[0][-1]
-    s = socket.socket()
-    s.settimeout(3)
-    try:
-        s.connect(addr)
-        # HTTP/1.0 + Host header
-        s.send(b"GET %s HTTP/1.0\r\nHost: %s\r\n\r\n" %
-               (path.encode(), host.encode()))
-        data = b""
-        while True:
-            chunk = s.recv(128)
-            if not chunk:
-                break
-            data += chunk
-        header_end = data.find(b"\r\n\r\n")
-        if header_end != -1:
-            return data[header_end + 4:].decode()
-        return data.decode()
-    finally:
-        s.close()
-
-
-def cache_stuff():
-    with open('motds.json', 'r') as f:
-        motds = json.load(f)
-    try:
-        cached_motds = http_get(
-            config.server_ip, config.server_port, "/fetch_cache")
-        cached_motds = json.loads(cached_motds)
-        print("Found cached motds!", cached_motds)
-        highest_id = motds[-1]["id"]
-        new_id = highest_id + 1
-        for motd in cached_motds:
-            motd['id'] = new_id
-            new_id += 1
-            motds.append(motd)
-        with open('motds.json', 'w') as f:
-            json.dump(motds, f)
-        http_get(config.server_ip, config.server_port, "/clear_cache")
-    except OSError as e:
-        if e.errno == errno.ETIMEDOUT or e.errno == errno.ECONNRESET:
-            config.display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
-            config.display.present()
-            print("timed out while getting cached motds")
-        else:
-            raise
-
-        print("slime me out")
-    try:
-        new_alarm_msg = http_get(
-            config.server_ip, config.server_port, "/fetch_alarm_msg")
-        print(new_alarm_msg)
-        if new_alarm_msg != '' and new_alarm_msg != '404 Not Found':
-            print("got new alarm message")
-            with open(f'alarm.json', 'r') as f:
-                # print(f.read())
-                data = json.load(f)
-            data['alarm_message'] = new_alarm_msg
-
-            with open(f'alarm.json', 'w') as f:
-                json.dump(data, f)
-
-            http_get(config.server_ip, config.server_port, "/clear_alarm_msg")
-
-        elif new_alarm_msg == 'random':
-            with open('alarm.json', 'r') as f:
-                data = json.load(f)
-
-            data['alarm_message'] = motd_parser.select_random_motd(motds)[
-                'motd']
-
-            with open('alarm.json', 'w') as f:
-                json.dump(data, f)
-        else:
-            print("did not find an alarm message in the cache", new_alarm_msg)
-    except OSError as e:
-        if e.errno == errno.ETIMEDOUT or e.errno == errno.ECONNRESET:
-            config.display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
-            config.display.present()
-            print("timed out while getting alarm message")
-        else:
-            raise
-
+display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
+display.present()
 
 try:
+    rtc = RTC()
+    print(machine.freq())
+
     wifi = connect.do_connect()
     settime()
-    cache_stuff()
+    fetch_cache()
     s, clients = webserver.web_setup()
 
     myalarm = Alarm(config.alarm_timeout_min * 60,
                     config.motor, config.headlights, config.speaker)
+    # alarm testing
+    # myalarm.hour = now[4]
+    # myalarm.minute = now[5]
 
     display_manager = mode.DisplayManager()
     home = Home(display_manager, myalarm, aliases.home)
@@ -150,24 +42,22 @@ try:
         display_manager, home, aliases.message_reader)
     display_manager.display_states = [home, alarm, off, message_reader]
     display_manager.set_active_state(aliases.home)
+    display.set_contrast(0)
 
     prev_dur = 0
+    loopcycles = 0
     lock_ntptime = False
-    config.display.set_contrast(0)
-
+    
     now = rtc.datetime()
-    # alarm testing
-
-    # myalarm.hour = now[4]
-    # myalarm.minute = now[5]
-
     print(now)
-
+    
+    usb_power = Pin('WL_GPIO2', Pin.IN)
+    usb_prev_state = None
     if usb_power.value() == 0:
         wifi.disconnect()
         wifi.active(False)
 
-    loopcycles = 0
+    
     while True:
         start = time.ticks_ms()
         displaytimer = time.ticks_ms()
@@ -200,6 +90,7 @@ try:
                 with open('alarm.json', 'w') as f:
                     json.dump(data, f)
         webserver_elapsed = time.ticks_diff(time.ticks_ms(), webservertimer)
+
         # handle alarm
         if display_manager.alarm_active:
             myalarm.update(now, home)
@@ -216,7 +107,7 @@ try:
             else:
                 print("setting time via ntp and fetching cache")
             try:
-                cache_stuff()
+                fetch_cache()
             except Exception:
                 print("couldn't fetch the cache")
             else:
@@ -232,6 +123,7 @@ try:
             connect.do_connect()
 
         usb_prev_state = usb_power.value()
+        
         loopcycles += 1
         if loopcycles >= 50:
             loopcycles = 0
@@ -241,7 +133,7 @@ try:
         dur = display_manager.display_timer.get_remaining()
         done = display_manager.display_timer.finished()
         cycle_time = time.ticks_diff(time.ticks_ms(), start)
-        print(f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed}, clock: {machine.freq()/1_000_000}, adc: {batstats.read_bat_voltage()}, mem: {gc.mem_free()/1000} KB, internal temp: {read_internal_temp()}", end="\r")
+        print(f"cycle: {cycle_time}, display: {display_elapsed}, web: {webserver_elapsed}, clock: {machine.freq()/1_000_000}, adc: {batstats.read_bat_voltage()}, mem: {gc.mem_free()/1000} KB, internal temp: {tempuratures.get_internal_temp()}", end="\r")
         home.looptime = cycle_time
 
 except Exception as e:
@@ -281,7 +173,7 @@ except Exception as e:
     timer.start()
 
     while not timer.finished():
-        sleep_ms(100)
+        time.sleep_ms(100)
 
 finally:
     print("doing cleanup")

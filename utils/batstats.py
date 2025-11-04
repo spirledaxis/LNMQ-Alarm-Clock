@@ -1,9 +1,9 @@
 from machine import ADC, Pin
 import config
 import framebuf
+from utils import make_icon
 adc = ADC(Pin(config.bat_adc))
-def make_icon(data, x=8, y=8):
-    return framebuf.FrameBuffer(bytearray(data), x, y, framebuf.MONO_VLSB)
+
 
 battery_critical = make_icon(
     [0x00, 0x7f, 0x40, 0xfb, 0xfb, 0x40, 0x7f, 0x00])

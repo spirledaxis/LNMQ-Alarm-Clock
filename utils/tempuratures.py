@@ -1,7 +1,9 @@
-from machine import I2C, Pin
+from machine import I2C, Pin, ADC #type: ignore
 import config
+
 # straight from Mr.GPT, idk how accurate it is
 # TODO: look at adafruits circutpython and mirror it in micro
+
 # TMP117 default I2C address
 TMP117_ADDR = 0x48
 TMP117_TEMP_REG = 0x00
@@ -10,7 +12,7 @@ TMP117_TEMP_REG = 0x00
 i2c = I2C(1, scl=Pin(config.tmp_scl), sda=Pin(config.tmp_sda), freq=400000)
 
 
-def read_tmp117_temp():
+def get_ambient_temp():
     # Read 2 bytes from temperature register
     data = i2c.readfrom_mem(TMP117_ADDR, TMP117_TEMP_REG, 2)
 
@@ -25,3 +27,12 @@ def read_tmp117_temp():
     temp_c = raw_temp * 0.0078125
     f = (temp_c * 9 / 5) + 32
     return f
+
+
+def get_internal_temp():
+    sensor_temp = ADC(4)
+    conversion_factor = 3.3 / 65535  # 16-bit ADC scaling
+
+    reading = sensor_temp.read_u16() * conversion_factor
+    temperature = 27 - (reading - 0.706) / 0.001721
+    return temperature

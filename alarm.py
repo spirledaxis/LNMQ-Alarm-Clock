@@ -1,8 +1,8 @@
-from lib import timeutils
+from utils import timeutils
 from lib.neotimer import Neotimer
 import json
 from displaystates import aliases
-import motd_parser
+import utils.motd_parser as motd_parser
 import config
 
 class Alarm:

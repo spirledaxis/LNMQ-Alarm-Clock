@@ -1,26 +1,18 @@
 from displaystates import aliases
-from hardware import Switch
-import config
-from lib.xglcd_font import XglcdFont
+from lib import Neotimer
+from hardware import display, switch
 import json
-from lib.neotimer import Neotimer
-from utime import ticks_ms  # type: ignore
-from machine import Pin  # type: ignore
-
-print("loading fonts...")
-timefont = XglcdFont('Proxy24x31.bin', 24, 31)
-bally = XglcdFont('Bally7x9.bin', 7, 9)
-bally_mini = XglcdFont('Bally5x8.bin', 5, 8)
-prev_dur = 0
-
+import config
+from alarm import Alarm
 
 class DisplayManager:
-    def __init__(self):
+    def __init__(self, alarm: Alarm):
         self.display_states: list[DisplayState] = None
-        self.display = config.display
+        self.display = display
         self.display_timer = Neotimer(config.display_timeout_min * 60_000)
         self.display_timer.start()
-        self.switch = Switch(config.switch)
+        self.switch = switch
+        self.alarm = alarm
         with open('alarm.json', 'r') as f:
             alarmdata = json.load(f)
             self.alarm_active = alarmdata['is_active']

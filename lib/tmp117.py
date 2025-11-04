@@ -123,6 +123,7 @@ class TMP117:
     _averaging_modes = {0: _avg_0, 1: _avg_1, 2: _avg_2, 3: _avg_3}
 
     def __init__(self, i2c, address=0x48) -> None:
+        raise NotImplementedError("Use utils/tempuratures.py instead")
         self._i2c = i2c
         self._address = address
         self._valide_range = range(-256, 255)
