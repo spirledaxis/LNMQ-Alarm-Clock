@@ -49,7 +49,7 @@ class Alarm:
             print("timeout reached")
             self.timeout_timer.reset()
             self.stop()
-            home.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+            home.motd = motd_parser.select_random_motd(home.motds_data)['motd']
             home.motd_mode = 'scroll'
 
         if self.is_active:
