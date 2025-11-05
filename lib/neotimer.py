@@ -1,4 +1,4 @@
-from time import ticks_ms, ticks_diff
+from time import ticks_diff, ticks_ms
 
 # Neotimer Class
 

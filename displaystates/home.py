@@ -1,17 +1,21 @@
-from mode import DisplayState
-from hardware import Button
-import config
-import json
-import framebuf #type: ignore
-from machine import Pin, RTC #type: ignore
-import network #type: ignore
-from utils import motd_parser
-import aliases
 import errno
-from . import timefont, bally, bally_mini
-from utils import timeutils, batstats, tempuratures, toggle_smartswitch, make_icon
-from lib import Neotimer, ntptime
+import json
 import time
+
+import framebuf  # type: ignore
+import network  # type: ignore
+from machine import RTC, Pin  # type: ignore
+
+import config
+from hardware import Button
+from lib import Neotimer, ntptime
+from utils import (batstats, make_icon, motd_parser, tempuratures, timeutils,
+                   toggle_smartswitch)
+
+from . import aliases
+from .fonts import bally, bally_mini, timefont
+from .mode import DisplayState
+
 
 class Home(DisplayState):
     def __init__(self, display_manager, name):
@@ -45,7 +49,7 @@ class Home(DisplayState):
 
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
         self.rtc = RTC()
-        self.alarm = alarm
+        self.alarm = display_manager.alarm
         self.time_len = 0
 
         self.bell_icon_fb = make_icon(
@@ -93,6 +97,7 @@ class Home(DisplayState):
         elif self.motd_mode == 'bounce':
             self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
             self.motd_mode = 'scroll'
+
     def on_alm_set(self):
         self.blink_wifi = False
         self.blinked_wifi = 0
@@ -166,6 +171,7 @@ class Home(DisplayState):
         self.blink_wifi = False
         self.blinked_wifi = 0
         self.display_manager.set_active_state(aliases.message_reader)
+
     def clock(self):
         now = self.rtc.datetime()
         month = now[1]
@@ -250,8 +256,6 @@ class Home(DisplayState):
             self.display.draw_sprite(self.sleep_icon, x + 2, y + 1, 7, 7)
         else:
             self.draw_temp()
-
-
 
     def reset_motd(self, motd=None):
         while self.motd == self.prev_motd:
@@ -344,7 +348,7 @@ class Home(DisplayState):
         if self.display_manager.alarm_active and self.alarm.snoozed == False:
             self.iconactive_bell = True
             self.display.draw_sprite(self.bell_icon_fb, x=x1, y=y2, w=8, h=8)
-        elif self.display_manager.alarm_active and self.alarm.snoozed == True:
+        elif self.display_manager.alarm_active and self.alarm.snoozed:
             self.iconactive_bell = True
             self.display.draw_sprite(self.snooze_icon, x=x1, y=y2, w=8, h=8)
         else:
@@ -380,8 +384,6 @@ class Home(DisplayState):
         else:
             self.iconactive_mail = False
             self.display.fill_rectangle(x=x2, y=y1, w=8, h=8, invert=True)
-
-
 
     def dst_warning(self):
         hour = self.rtc.datetime()[4]
@@ -427,9 +429,10 @@ class Home(DisplayState):
 
 
 if __name__ == '__main__':
-    from displaystates import mode
     import machine  # type: ignore
+
     from alarm import Alarm
+    from displaystates import mode
     displaymanager = mode.DisplayManager()
     from config import motor, speaker, switch
     from hardware import Switch

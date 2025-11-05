@@ -1,5 +1,8 @@
-from machine import Pin #type: ignore
+from machine import Pin  # type: ignore
+
 from lib import Neotimer
+
+
 class Button:
     def __init__(self, pin, callback, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -33,6 +36,7 @@ class Button:
 
         self.prev_state = self.state
 
+
 class RepeatButton(Button):
     def __init__(self, pin, callback, init_delay_ms=200, repeat_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)
@@ -57,4 +61,3 @@ class RepeatButton(Button):
             self.pressed = True
         else:
             self.pressed = False
-            

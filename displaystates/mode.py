@@ -1,9 +1,11 @@
-from displaystates import aliases
-from lib import Neotimer
-from hardware import display, switch
 import json
+
 import config
 from alarm import Alarm
+from displaystates import aliases
+from hardware import display, switch
+from lib import Neotimer
+
 
 class DisplayManager:
     def __init__(self, alarm: Alarm):
@@ -59,7 +61,7 @@ class DisplayManager:
 
 class DisplayState:
     def __init__(self, buttonmap, name, display_manager: DisplayManager):
-        self.display = config.display
+        self.display = display
         self.name = name
         self.active = False
         self.button_map = buttonmap

@@ -1,4 +1,6 @@
 import socket
+
+
 def http_get(host, port, path):
     addr = socket.getaddrinfo(host, port)[0][-1]
     s = socket.socket()

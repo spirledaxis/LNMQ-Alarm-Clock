@@ -1,6 +1,8 @@
-from wificreds import name, password
-import network  # type: ignore
 import time
+
+import network  # type: ignore
+from wificreds import name, password
+
 
 def do_connect():
     print('do_connect called')
@@ -13,7 +15,7 @@ def do_connect():
             if sta_if.isconnected():
                 break
             time.sleep(0.5)
-    
+
     ip, subnet, gateway, dns = sta_if.ifconfig()
     print('Network config:', (ip, subnet, gateway, dns))
 

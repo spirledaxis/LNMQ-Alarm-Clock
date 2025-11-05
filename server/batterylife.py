@@ -1,12 +1,14 @@
 import time
+
 import requests
+
 start = time.time()
 counter = 0
 timeouts = 0
 while True:
     try:
         print("requesting...", end=' ')
-        requests.get('http://192.168.1.51/status.json', timeout=10) 
+        requests.get('http://192.168.1.51/status.json', timeout=10)
     except requests.exceptions.ConnectionError:
         print("clock went down")
         end = time.time()

@@ -1,6 +1,10 @@
-from machine import PWM, Pin #type: ignore
+from machine import PWM, Pin  # type: ignore
+
 from lib.neotimer import Neotimer
-from motor_movements import *
+
+from .motor_movements import *
+
+
 class Motor:
     def __init__(self, left_pin, right_pin, pwm_freq, min_pwm):
         "cmd sytax: ('dir', time_ms, %speed)"
@@ -102,4 +106,3 @@ class Motor:
         else:
             self.set_movement(default)
             self.repeat = True
-

@@ -1,8 +1,3 @@
-from machine import SPI, Pin  # type: ignore
-from hardware.ssd1309 import Display
-from hardware.picodfplayer import DFPlayer
-from lib.neotimer import Neotimer
-from hardware import Motor, HeadLights, HeadLightsStream
 # motor
 motor_l = 19
 motor_r = 18
@@ -43,7 +38,7 @@ cs = 11
 spi_channel_disp = 1
 
 
-#temperature
+# temperature
 tmp_scl = 27
 tmp_sda = 26
 
@@ -79,5 +74,3 @@ bat_adc = 28
 msg_scroll_speed = 1
 snooze_min = 10
 scroll_on_fwd = 20
-#in MHZ
-

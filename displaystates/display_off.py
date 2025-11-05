@@ -1,14 +1,19 @@
-from mode import DisplayState
-from hardware import Button
-from machine import Pin #type: ignore
-import framebuf #type: ignore
-from lib import Neotimer
-import config
-import random
-from utils import batstats, toggle_smartswitch
-from time import sleep_ms
 import errno
-import aliases
+import random
+from time import sleep_ms
+
+import framebuf  # type: ignore
+from machine import Pin  # type: ignore
+
+import config
+from hardware import Button
+from lib import Neotimer
+from utils import batstats, toggle_smartswitch
+
+from . import aliases
+from .mode import DisplayState
+
+
 class DisplayOff(DisplayState):
     def __init__(self, display_manager, name):
         self.button_map = [

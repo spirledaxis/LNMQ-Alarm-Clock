@@ -1,14 +1,18 @@
-from mode import DisplayState
-from hardware import Button, RepeatButton
-import config
 import json
-from . import bally, timefont
-import framebuf #type: ignore
-import aliases
+
+import framebuf  # type: ignore
+
+import config
+from hardware import Button, RepeatButton, headlights, motor, speaker
 from utils import timeutils
 
+from . import aliases
+from .fonts import bally, timefont
+from .mode import DisplayState
+
+
 class SetAlarm(DisplayState):
-    def __init__(self, display_manager, alarm, name):
+    def __init__(self, display_manager, name):
         self.button_map = [
             Button(config.fwd, self.on_fwd),
             Button(config.rev, self.on_rev),
@@ -40,7 +44,7 @@ class SetAlarm(DisplayState):
         self.selection = 'minute'
         self.ringtone_y = self.display.height // 2 + \
             timefont.height // 2 + bally.height // 2
-        self.alarm = alarm
+        self.alarm = self.display_manager.alarm
         self.edit_options = [
             'hour',
             'minute',
@@ -50,7 +54,7 @@ class SetAlarm(DisplayState):
             'volume']
         self.edit_index = 0
         self.display_manager = display_manager
-        self.motor = config.motor
+        self.motor = motor
         self.motor.ready = False
         # offset from the left edge where things are drawn
         self.offsetx = self.display.width - 10
@@ -132,17 +136,17 @@ class SetAlarm(DisplayState):
             self.alarm_active = not self.alarm_active
 
     def on_snze_l(self):
-        if not config.speaker.queryBusy():
+        if not speaker.queryBusy():
             self.motor.set_movement_by_ringtone(self.ringtone_index)
-            config.speaker.setVolume(self.volume)
-            config.speaker.playTrack(1, self.ringtone_index)
-            #self.motor.start()
-            config.headlights.start(f"pulsepatterns/{self.ringtone_index}.json")
+            speaker.setVolume(self.volume)
+            speaker.playTrack(1, self.ringtone_index)
+            # self.motor.start()
+            headlights.start(f"pulsepatterns/{self.ringtone_index}.json")
         else:
             print("stopping preview")
-            config.speaker.pause()
-            #self.motor.stop()
-            config.headlights.stop()
+            speaker.pause()
+            # self.motor.stop()
+            headlights.stop()
 
     def on_clk_set(self):
         if self.selection == 'minute':
@@ -291,11 +295,10 @@ class SetAlarm(DisplayState):
 
 
 if __name__ == '__main__':
-    from displaystates import mode
-
     from alarm import Alarm
+    from displaystates import mode
     displaymanager = mode.DisplayManager()
-    from config import motor, speaker, switch, headlights
+    from config import headlights, motor, speaker, switch
     from hardware import Switch
     switch = Switch(switch)
     alarm = Alarm(60, motor, headlights, speaker, switch)
@@ -303,10 +306,10 @@ if __name__ == '__main__':
     displaymanager.display_states = [setalarm]
     displaymanager.set_active_state("test")
     import _thread
+
     def headlight_loop():
         while True:
             headlights.run()
     _thread.start_new_thread(headlight_loop, ())
     while True:
         displaymanager.run_current_state()
-      

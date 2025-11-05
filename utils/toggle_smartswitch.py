@@ -1,5 +1,8 @@
-import config
 import socket
+
+import config
+
+
 def toggle_smartswitch():
     host = config.server_ip
     path = '/toggle_light'
@@ -7,5 +10,5 @@ def toggle_smartswitch():
     s = socket.socket()
     s.connect(addr)
     s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " +
-            host.encode() + b"\r\nConnection: close\r\n\r\n")
+           host.encode() + b"\r\nConnection: close\r\n\r\n")
     s.close()

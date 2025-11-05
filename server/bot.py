@@ -1,11 +1,15 @@
-import interactions
-from interactions import slash_command, slash_option, OptionType, SlashContext, Client, Intents, BrandColors, check, is_owner
-import subprocess
-from creds import token
+import json
 import re
+import subprocess
 import textwrap
 import time
-import json
+
+import interactions
+from creds import token
+from interactions import (BrandColors, Client, Intents, OptionType,
+                          SlashContext, check, is_owner, slash_command,
+                          slash_option)
+
 char_lens = {  # based on Bally7x9
     ' ': 5,
     '!': 5,

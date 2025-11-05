@@ -23,9 +23,9 @@ This library depends on Micropython
 
 import time
 from collections import namedtuple
+
 from micropython import const
 from micropython_tmp117.i2c_helpers import CBits, RegisterStruct
-
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/jposada202020/MicroPython_TMP117.git"

@@ -1,10 +1,13 @@
-from lib.neotimer import Neotimer
-import json
-import utime
-import errno
-from machine import PWM, Pin
 import _thread
+import errno
+import json
 import time
+
+import utime
+from machine import PWM, Pin
+
+from lib.neotimer import Neotimer
+
 
 class HeadLights:
     def __init__(self, left_pin, right_pin, pwm_freq, max_brightness=1):
@@ -66,7 +69,7 @@ class HeadLights:
                 strength = self.pulse_pattern[0][1]
             else:
                 waitfor = self.pulse_pattern[self.increment][0] - \
-                          self.pulse_pattern[self.increment - 1][0]
+                    self.pulse_pattern[self.increment - 1][0]
                 strength = self.pulse_pattern[self.increment - 1][1]
 
             # clamp strength to max_brightness
@@ -81,6 +84,7 @@ class HeadLights:
             self.increment += 1
             self.timer = Neotimer(waitfor)
             self.timer.start()
+
 
 class HeadLightsStream:
     """
@@ -101,6 +105,7 @@ class HeadLightsStream:
         self.prev_t = None
         self.prev_strength = None
         self.stop_thread = False
+
     def stop(self):
         """Stop headlights output"""
         print("attempted to stop lightshow")
@@ -111,6 +116,7 @@ class HeadLightsStream:
         self.prev_t = None
         self.prev_strength = None
         self.stop_thread = True
+
     def start(self, filename):
         """Begin streaming a pattern from a JSON file"""
         try:
@@ -196,7 +202,6 @@ class HeadLightsStream:
             self.run()
             time.sleep_us(500)
 
-    
     def _set_duty(self, strength):
         """Apply PWM duty to both headlights"""
         duty = int(strength * 65535)

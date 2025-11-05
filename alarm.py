@@ -1,9 +1,11 @@
-from utils import timeutils
-from lib.neotimer import Neotimer
 import json
-from displaystates import aliases
-import utils.motd_parser as motd_parser
+
 import config
+import utils.motd_parser as motd_parser
+from displaystates import aliases
+from lib.neotimer import Neotimer
+from utils import timeutils
+
 
 class Alarm:
     def __init__(self, timeout_s, motor, headlights, speaker):
@@ -18,7 +20,7 @@ class Alarm:
 
         self.hour = timeutils.to_military_time(alarm_hour, alarm_ampm)
         self.timeout_timer = Neotimer(timeout_s * 1000)
-     
+
         self.is_active = False
         self.locked = False  # used so we don't call fire for the entire minute
         self.motor = motor
@@ -88,11 +90,12 @@ class Alarm:
         home.motd = alarm_message
         self.speaker.setVolume(volume)
         self.speaker.playTrack(1, self.ringtone)
-        #self.motor.start()
-        #self.motor.set_movement_by_ringtone(self.ringtone)
+        # self.motor.start()
+        # self.motor.set_movement_by_ringtone(self.ringtone)
         self.headlights.start(f"pulsepatterns/{self.ringtone}.json")
         self.timeout_timer.start()
         self.speaker_state_timer.start()
+
     def snooze(self):
         self.is_active = False
         self.snoozed = True
@@ -115,11 +118,11 @@ class Alarm:
         self.is_active = False
         self.ringtone = self.original_ringtone
 
-        #reset to the original time
+        # reset to the original time
         if self.snoozed and undo_snooze:
             with open('alarm.json', 'r') as f:
                 data = json.load(f)
-            
+
             self.hour = data['hour']
             self.minute = data['minute']
             ampm = data['ampm']

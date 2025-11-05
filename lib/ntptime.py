@@ -1,6 +1,7 @@
-import time
 import socket
 import struct
+import time
+
 import machine  # type: ignore
 
 # The NTP host can be configured at runtime by doing: ntptime.host =
@@ -90,6 +91,7 @@ def is_dst_pacific(t):
 
     return dst_start_utc <= utc_sec < dst_end_utc
 
+
 def dst_change_soon_pacific(t):
     """Return 1 if DST will start soon, -1 if DST will end soon, else 0.
        Takes a local Pacific time tuple from the Pico RTC."""
@@ -117,7 +119,6 @@ def dst_change_soon_pacific(t):
     else:
         return 0
 
-    
 
 def settime():
     t = get_time()  # UTC time in seconds

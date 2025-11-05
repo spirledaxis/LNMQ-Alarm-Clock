@@ -1,7 +1,8 @@
 """MicroPython SSD1309 OLED monochrome display driver."""
-from math import cos, sin, pi, radians
+from math import cos, pi, radians, sin
+
+from framebuf import GS8, MONO_HMSB, MONO_VLSB, FrameBuffer  # type: ignore
 from micropython import const  # type: ignore
-from framebuf import FrameBuffer, GS8, MONO_HMSB, MONO_VLSB  # type: ignore
 from utime import sleep_ms  # type: ignore
 
 

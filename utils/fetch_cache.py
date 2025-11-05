@@ -1,8 +1,13 @@
-import json
-import config
-from bigicons import *
 import errno
+import json
+
+import config
 import utils.motd_parser as motd_parser
+from bigicons import *
+
+from .http_get import http_get
+
+
 def fetch_cache():
     with open('motds.json', 'r') as f:
         motds = json.load(f)

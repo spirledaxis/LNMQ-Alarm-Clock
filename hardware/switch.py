@@ -1,3 +1,8 @@
+from machine import Pin  # type: ignore
+
+from lib import Neotimer
+
+
 class Switch:
     def __init__(self, pin, debounce_ms=100):
         self.pin = Pin(pin, Pin.IN, Pin.PULL_UP)

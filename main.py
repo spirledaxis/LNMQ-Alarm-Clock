@@ -1,18 +1,22 @@
-import config
-import framebuf  # type: ignore
-from bigicons import *
-import machine #type: ignore
-from machine import RTC, Pin #type: ignore
-from utils import fetch_cache, connect, motd_parser, tempuratures, batstats, http_get
-from lib import settime, Neotimer
-from displaystates import Home, mode, aliases, SetAlarm, MessageViewer, DisplayOff
-import webserver
-import time
-import json
-import io
-from alarm import Alarm
 import gc
-from hardware import display
+import io
+import json
+import time
+
+import framebuf  # type: ignore
+import machine  # type: ignore
+from machine import RTC, Pin  # type: ignore
+
+import config
+import webserver
+from alarm import Alarm
+from bigicons import *
+from displaystates import (DisplayOff, Home, MessageViewer, SetAlarm, aliases,
+                           mode)
+from hardware import display, headlights, motor, speaker
+from lib import Neotimer, settime
+from utils import (batstats, connect, fetch_cache, http_get, motd_parser,
+                   tempuratures)
 
 booticon = framebuf.FrameBuffer(
     booticon, 128, 64, framebuf.MONO_VLSB)
@@ -29,17 +33,16 @@ try:
     s, clients = webserver.web_setup()
 
     myalarm = Alarm(config.alarm_timeout_min * 60,
-                    config.motor, config.headlights, config.speaker)
+                    motor, headlights, speaker)
     # alarm testing
     # myalarm.hour = now[4]
     # myalarm.minute = now[5]
 
-    display_manager = mode.DisplayManager()
-    home = Home(display_manager, myalarm, aliases.home)
-    alarm = SetAlarm(display_manager, myalarm, aliases.set_alarm)
+    display_manager = mode.DisplayManager(myalarm)
+    home = Home(display_manager, aliases.home)
+    alarm = SetAlarm(display_manager, aliases.set_alarm)
     off = DisplayOff(display_manager, aliases.display_off)
-    message_reader = MessageViewer(
-        display_manager, home, aliases.message_reader)
+    message_reader = MessageViewer(display_manager, home, aliases.message_reader)
     display_manager.display_states = [home, alarm, off, message_reader]
     display_manager.set_active_state(aliases.home)
     display.set_contrast(0)
@@ -47,17 +50,16 @@ try:
     prev_dur = 0
     loopcycles = 0
     lock_ntptime = False
-    
+
     now = rtc.datetime()
     print(now)
-    
+
     usb_power = Pin('WL_GPIO2', Pin.IN)
     usb_prev_state = None
     if usb_power.value() == 0:
         wifi.disconnect()
         wifi.active(False)
 
-    
     while True:
         start = time.ticks_ms()
         displaytimer = time.ticks_ms()
@@ -123,7 +125,7 @@ try:
             connect.do_connect()
 
         usb_prev_state = usb_power.value()
-        
+
         loopcycles += 1
         if loopcycles >= 50:
             loopcycles = 0
@@ -138,8 +140,8 @@ try:
 
 except Exception as e:
     # TODO: add emergency alarm
-    config.speaker.cleanup()
-    config.motor.stop()
+    speaker.cleanup()
+    motor.stop()
     import sys
     sys.print_exception(e)
     print("there was an error")
@@ -177,9 +179,9 @@ except Exception as e:
 
 finally:
     print("doing cleanup")
-    config.speaker.cleanup()
+    speaker.cleanup()
     display.cleanup()
-    config.motor.stop()
-    config.headlights.stop()
+    motor.stop()
+    headlights.stop()
     stop_threads = True
     print("cleanup success!")

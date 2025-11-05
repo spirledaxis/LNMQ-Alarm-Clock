@@ -1,4 +1,5 @@
-from machine import I2C, Pin, ADC #type: ignore
+from machine import ADC, I2C, Pin  # type: ignore
+
 import config
 
 # straight from Mr.GPT, idk how accurate it is
