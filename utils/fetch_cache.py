@@ -4,11 +4,13 @@ import json
 import config
 import utils.motd_parser as motd_parser
 from bigicons import *
-
+from hardware import display
 from .http_get import http_get
-
+from utils import make_icon
+import time
 
 def fetch_cache():
+    booticon_warning = make_icon(booticon_warning, 128, 64)
     with open('motds.json', 'r') as f:
         motds = json.load(f)
     try:
@@ -27,8 +29,8 @@ def fetch_cache():
         http_get(config.server_ip, config.server_port, "/clear_cache")
     except OSError as e:
         if e.errno == errno.ETIMEDOUT or e.errno == errno.ECONNRESET:
-            config.display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
-            config.display.present()
+            display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
+            display.present(time.sleep(5))
             print("timed out while getting cached motds")
         else:
             raise
@@ -63,8 +65,9 @@ def fetch_cache():
             print("did not find an alarm message in the cache", new_alarm_msg)
     except OSError as e:
         if e.errno == errno.ETIMEDOUT or e.errno == errno.ECONNRESET:
-            config.display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
-            config.display.present()
+            display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
+            display.present()
+            time.sleep(5)
             print("timed out while getting alarm message")
         else:
             raise
