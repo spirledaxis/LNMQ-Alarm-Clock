@@ -1,7 +1,7 @@
+import time
 
 import ujson as json
 from machine import PWM, Pin  # type: ignore
-import time
 
 with open('pattern.json', 'r') as f:
     pattern = json.load(f)

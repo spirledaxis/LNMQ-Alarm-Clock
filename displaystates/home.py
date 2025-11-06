@@ -1,26 +1,26 @@
-import config
-from hardware import Button
+import errno
 import json
-from lib.neotimer import Neotimer
-from machine import Pin, RTC  # type: ignore
+import time
+
 import framebuf  # type: ignore
 import network  # type: ignore
-import lib.timeutils as timeutils
-import math
-import random
-import motd_parser
-from displaystates.mode import DisplayState, timefont, bally, bally_mini
-import socket
-from displaystates import aliases
-import errno
-import time
-from lib import batstats, tmp117_temp, ntptime
+from machine import RTC, Pin  # type: ignore
+
+import config
+from hardware import Button
+from lib import Neotimer, ntptime
+from utils import (batstats, make_icon, motd_parser, tempuratures, timeutils,
+                   toggle_smartswitch)
+
+from . import aliases
+from .fonts import bally, bally_mini, timefont
+from .mode import DisplayState
 
 
 class Home(DisplayState):
-    def __init__(self, display_manager, alarm, name):
+    def __init__(self, display_manager, name):
         self.button_map = [
-            Button(config.alm_set, self.goto_alarm),
+            Button(config.alm_set, self.on_alm_set),
             Button(config.snze_l, self.on_snze),
             Button(config.fwd, self.on_fwd),
             Button(config.rev, self.on_rev),
@@ -29,7 +29,6 @@ class Home(DisplayState):
         ]
         super().__init__(self.button_map, name, display_manager)
         self.display_manager = display_manager
-
         self.motd = ''
         self.prev_motd = ''
         self.motd_dir = 'l'
@@ -50,12 +49,8 @@ class Home(DisplayState):
 
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
         self.rtc = RTC()
-        self.alarm = alarm
+        self.alarm = display_manager.alarm
         self.time_len = 0
-
-        def make_icon(data, x=8, y=8):
-            return framebuf.FrameBuffer(
-                bytearray(data), x, y, framebuf.MONO_VLSB)
 
         self.bell_icon_fb = make_icon(
             [0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])
@@ -92,6 +87,90 @@ class Home(DisplayState):
         self.iconactive_battery = False
         self.iconactive_mail = False
         self.v_battery = 0
+
+    def on_rev(self):
+        if self.motd_mode == 'scroll':
+            with open('alarm.json', 'r') as f:
+                data = json.load(f)
+                self.motd = data['alarm_message']
+                self.motd_mode = 'bounce'
+        elif self.motd_mode == 'bounce':
+            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+            self.motd_mode = 'scroll'
+
+    def on_alm_set(self):
+        self.blink_wifi = False
+        self.blinked_wifi = 0
+        self.display_manager.set_active_state(aliases.set_alarm)
+
+    def on_snd_sfx(self):
+        if self.alarm.is_active:
+            self.alarm.stop()
+            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+            self.motd_mode = 'scroll'
+        else:
+            self.blink_wifi = False
+            self.blinked_wifi = 0
+            self.display_manager.set_active_state(aliases.display_off)
+
+    def on_fwd(self):
+
+        if len(self.new_motds) == 0:
+            self.motd_pos += config.scroll_on_fwd
+            self.motd_pos_noadj += config.scroll_on_fwd
+        else:
+            print("reading message")
+            with open('motds.json', 'r') as f:
+                all_motds = json.load(f)
+
+            for motd in all_motds:
+                # set the read motd to new: false
+                if motd['id'] == self.new_motds[0]['id']:
+                    print(motd, motd['id'], self.new_motds[0])
+                    print("marked motd as read")
+                    motd['new'] = False
+                    break
+            else:
+                raise ValueError(
+                    "something went wrong when reading the message")
+
+            motd = self.new_motds[0]
+            motd = f"{motd['motd']} @{motd['author']}"
+
+            self.reset_motd(motd)
+            self.new_motds.pop(0)
+
+            # update the json file so it says new: false
+            with open('motds.json', 'w') as f:
+                json.dump(all_motds, f)
+
+            # then, reload the data
+            with open('motds.json', 'r') as f:
+                self.motds_data = json.load(f)
+
+    def on_snze(self):
+        if self.alarm.is_active:
+            self.alarm.stop(False)
+            self.alarm.snooze()
+            self.blink_wifi = False
+            self.blinked_wifi = 0
+            self.display_manager.set_active_state(aliases.display_off)
+
+        else:
+            print("turning off light")
+            try:
+                toggle_smartswitch()
+            except OSError as e:
+                if e.errno == errno.EHOSTUNREACH:
+                    self.blink_wifi = True
+                else:
+                    raise
+
+    def on_clk(self):
+        print("switching state")
+        self.blink_wifi = False
+        self.blinked_wifi = 0
+        self.display_manager.set_active_state(aliases.message_reader)
 
     def clock(self):
         now = self.rtc.datetime()
@@ -137,7 +216,7 @@ class Home(DisplayState):
         x = (self.display.width + self.time_len) // 2 + 18 + 10 + self.offset
         y = (self.display.height + timefont.height) // 2 - \
             timefont.height + bally_mini.height
-        tempurature = tmp117_temp.read_tmp117_temp()
+        tempurature = tempuratures.get_ambient_temp()
         tempurature = round(tempurature, 1)
         self.display.draw_text(x, y, f'{tempurature}', bally_mini, rotate=180)
         self.display.draw_sprite(self.degree_symbol,
@@ -177,16 +256,6 @@ class Home(DisplayState):
             self.display.draw_sprite(self.sleep_icon, x + 2, y + 1, 7, 7)
         else:
             self.draw_temp()
-
-    def on_rev(self):
-        if self.motd_mode == 'scroll':
-            with open('alarm.json', 'r') as f:
-                data = json.load(f)
-                self.motd = data['alarm_message']
-                self.motd_mode = 'bounce'
-        elif self.motd_mode == 'bounce':
-            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
-            self.motd_mode = 'scroll'
 
     def reset_motd(self, motd=None):
         while self.motd == self.prev_motd:
@@ -279,7 +348,7 @@ class Home(DisplayState):
         if self.display_manager.alarm_active and self.alarm.snoozed == False:
             self.iconactive_bell = True
             self.display.draw_sprite(self.bell_icon_fb, x=x1, y=y2, w=8, h=8)
-        elif self.display_manager.alarm_active and self.alarm.snoozed == True:
+        elif self.display_manager.alarm_active and self.alarm.snoozed:
             self.iconactive_bell = True
             self.display.draw_sprite(self.snooze_icon, x=x1, y=y2, w=8, h=8)
         else:
@@ -316,92 +385,12 @@ class Home(DisplayState):
             self.iconactive_mail = False
             self.display.fill_rectangle(x=x2, y=y1, w=8, h=8, invert=True)
 
-    def goto_alarm(self):
-        self.blink_wifi = False
-        self.blinked_wifi = 0
-        self.display_manager.set_active_state(aliases.set_alarm)
-
-    def on_snd_sfx(self):
-        if self.alarm.is_active:
-            self.alarm.stop()
-            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
-            self.motd_mode = 'scroll'
-        else:
-            self.blink_wifi = False
-            self.blinked_wifi = 0
-            self.display_manager.set_active_state(aliases.display_off)
-
-    def on_fwd(self):
-
-        if len(self.new_motds) == 0:
-            self.motd_pos += config.scroll_on_fwd
-            self.motd_pos_noadj += config.scroll_on_fwd
-        else:
-            print("reading message")
-            with open('motds.json', 'r') as f:
-                all_motds = json.load(f)
-
-            for motd in all_motds:
-                # set the read motd to new: false
-                if motd['id'] == self.new_motds[0]['id']:
-                    print(motd, motd['id'], self.new_motds[0])
-                    print("marked motd as read")
-                    motd['new'] = False
-                    break
-            else:
-                raise ValueError(
-                    "something went wrong when reading the message")
-
-            motd = self.new_motds[0]
-            motd = f"{motd['motd']} @{motd['author']}"
-
-            self.reset_motd(motd)
-            self.new_motds.pop(0)
-
-            # update the json file so it says new: false
-            with open('motds.json', 'w') as f:
-                json.dump(all_motds, f)
-
-            # then, reload the data
-            with open('motds.json', 'r') as f:
-                self.motds_data = json.load(f)
-
-    def on_snze(self):
-        if self.alarm.is_active:
-            self.alarm.stop(False)
-            self.alarm.snooze()
-            self.blink_wifi = False
-            self.blinked_wifi = 0
-            self.display_manager.set_active_state(aliases.display_off)
-
-        else:
-            print("turning off light")
-            try:
-                host = config.server_ip
-                path = '/toggle_light'
-                addr = socket.getaddrinfo(host, config.server_port)[0][-1]
-                s = socket.socket()
-                s.connect(addr)
-                s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " +
-                       host.encode() + b"\r\nConnection: close\r\n\r\n")
-                s.close()
-            except OSError as e:
-                if e.errno == errno.EHOSTUNREACH:
-                    self.blink_wifi = True
-                else:
-                    raise
-
-    def on_clk(self):
-        print("switching state")
-        self.blink_wifi = False
-        self.blinked_wifi = 0
-        self.display_manager.set_active_state(aliases.message_reader)
-
     def dst_warning(self):
         hour = self.rtc.datetime()[4]
         hour, _ = timeutils.convert_to_ampm(hour)
         arrow_len = timefont.measure_text(str(hour))
-        arrow_x = ((self.display.width + self.time_len) // 2) - arrow_len + self.offset
+        arrow_x = ((self.display.width + self.time_len) // 2) - \
+            arrow_len + self.offset
         arrow_y = self.display.height // 2 - timefont.height // 2
         if ntptime.dst_change_soon_pacific(self.rtc.datetime()) == 1:
             self.display.draw_hline(arrow_x, arrow_y, arrow_len)
@@ -440,9 +429,10 @@ class Home(DisplayState):
 
 
 if __name__ == '__main__':
-    from displaystates import mode
     import machine  # type: ignore
+
     from alarm import Alarm
+    from displaystates import mode
     displaymanager = mode.DisplayManager()
     from config import motor, speaker, switch
     from hardware import Switch

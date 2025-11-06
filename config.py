@@ -1,32 +1,23 @@
-from machine import SPI, Pin  # type: ignore
-from lib.ssd1309 import Display
-from lib.picodfplayer import DFPlayer
-from lib.neotimer import Neotimer
-from hardware import Motor, HeadLights, HeadLightsStream
 # motor
 motor_l = 19
 motor_r = 18
 motor_pwm_freq = 20_000
 motor_min_pwm = 37_000
-motor = Motor(motor_l, motor_r, motor_pwm_freq, motor_min_pwm)
+
 
 # headlights
 headlight_l = 22
 headlight_r = 3
 headlights_pwm_freq = 1000
 max_brightness = 1  # value from 0 to 1
-headlights = HeadLightsStream(
-    headlight_l,
-    headlight_r,
-    headlights_pwm_freq,
-    max_brightness)
+
 # dfplayer
 rx = 17
 tx = 16
 transistor = 21
 busy = 20
 uarto_channel_df = 0
-speaker = DFPlayer(uarto_channel_df, tx, rx, busy, transistor)
+
 
 # display
 """
@@ -45,11 +36,9 @@ res = 13
 dc = 12
 cs = 11
 spi_channel_disp = 1
-spi = SPI(spi_channel_disp, baudrate=5_000_000, sck=Pin(sck), mosi=Pin(sda))
-display = Display(spi, dc=Pin(dc), cs=Pin(cs), rst=Pin(res),
-                  offscreen_warnings=False, flip=True)
 
-#temperature
+
+# temperature
 tmp_scl = 27
 tmp_sda = 26
 
@@ -85,5 +74,3 @@ bat_adc = 28
 msg_scroll_speed = 1
 snooze_min = 10
 scroll_on_fwd = 20
-#in MHZ
-

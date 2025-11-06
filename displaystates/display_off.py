@@ -1,24 +1,26 @@
 import errno
-from utime import sleep_ms
-from displaystates import aliases
-from hardware import Button
-import config
-import socket
-from displaystates.mode import DisplayState
-from lib.neotimer import Neotimer
+import random
+from time import sleep_ms
+
 import framebuf  # type: ignore
 from machine import Pin  # type: ignore
-import random
-from lib import batstats
+
+import config
+from hardware import Button
+from lib import Neotimer
+from utils import batstats, toggle_smartswitch
+
+from . import aliases
+from .mode import DisplayState
+
 
 class DisplayOff(DisplayState):
     def __init__(self, display_manager, name):
         self.button_map = [
             Button(config.snd_fx_l, self.exit),
             Button(config.snze_l, self.toggle_light),
-
-
         ]
+
         self.display_manager = display_manager
         self.sleep_lock = False
         super().__init__(self.button_map, name, display_manager)
@@ -68,14 +70,7 @@ class DisplayOff(DisplayState):
 
     def toggle_light(self):
         try:
-            host = config.server_ip
-            path = '/toggle_light'
-            addr = socket.getaddrinfo(host, config.server_port)[0][-1]
-            s = socket.socket()
-            s.connect(addr)
-            s.send(b"GET " + path.encode() + b" HTTP/1.1\r\nHost: " +
-                   host.encode() + b"\r\nConnection: close\r\n\r\n")
-            s.close()
+            toggle_smartswitch()
         except OSError as e:
             if e.errno == errno.EHOSTUNREACH:
                 self.blink_wifi = True

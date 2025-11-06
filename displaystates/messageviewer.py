@@ -1,13 +1,16 @@
-from displaystates.mode import DisplayState, timefont, bally
-from hardware import Button
-import config
-import motd_parser
-from machine import Pin  # type: ignore
-import framebuf  # type: ignore
-import network  # type: ignore
-from lib.neotimer import Neotimer
 import json
-from displaystates import aliases
+
+import network  # type: ignore
+from machine import Pin  # type: ignore
+
+import config
+from hardware import Button
+from lib import Neotimer
+from utils import make_icon, motd_parser
+
+from . import aliases
+from .fonts import bally
+from .mode import DisplayState
 
 
 class MessageViewer(DisplayState):
@@ -43,9 +46,6 @@ class MessageViewer(DisplayState):
 
         self.invert = True
 
-        def make_icon(data):
-            return framebuf.FrameBuffer(
-                bytearray(data), 8, 8, framebuf.MONO_VLSB)
         self.inverted_battery = make_icon(
             [0xff, 0x80, 0xbe, 0x3e, 0x3e, 0xbe, 0x80, 0xff])
         self.inverted_plug = make_icon(

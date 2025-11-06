@@ -1,6 +1,7 @@
+import time
+
 import ujson as json
 from machine import PWM, Pin  # type: ignore
-import time
 
 
 def stream_pattern(filename):

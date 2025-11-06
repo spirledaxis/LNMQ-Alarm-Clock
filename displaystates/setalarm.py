@@ -1,25 +1,28 @@
-from displaystates import aliases
-from displaystates.mode import DisplayState, timefont, bally
-from hardware import Button, RepeatButton
-import config
 import json
-from lib import timeutils
-from time import sleep_ms
+
 import framebuf  # type: ignore
+
+import config
+from hardware import Button, RepeatButton, headlights, motor, speaker
+from utils import timeutils
+
+from . import aliases
+from .fonts import bally, timefont
+from .mode import DisplayState
 
 
 class SetAlarm(DisplayState):
-    def __init__(self, display_manager, alarm, name):
+    def __init__(self, display_manager, name):
         self.button_map = [
             Button(config.fwd, self.on_fwd),
             Button(config.rev, self.on_rev),
-            Button(config.alm_set, self.on_exit),
-            Button(config.snd_fx_l, self.on_selection),
-            Button(config.snze_l, self.preview),
-            Button(config.clk_set, self.goto_midpoint),
+            Button(config.alm_set, self.on_alm_set),
+            Button(config.snd_fx_l, self.on_snd_fx_l),
+            Button(config.snze_l, self.on_snze_l),
+            Button(config.clk_set, self.on_clk_set),
             RepeatButton(config.fwd, self.on_fwd),
             RepeatButton(config.rev, self.on_rev),
-            RepeatButton(config.snd_fx_l, self.on_selection)
+            RepeatButton(config.snd_fx_l, self.on_snd_fx_l)
         ]
         super().__init__(self.button_map, name, display_manager)
         with open('alarm.json', 'r') as f:
@@ -41,7 +44,7 @@ class SetAlarm(DisplayState):
         self.selection = 'minute'
         self.ringtone_y = self.display.height // 2 + \
             timefont.height // 2 + bally.height // 2
-        self.alarm = alarm
+        self.alarm = self.display_manager.alarm
         self.edit_options = [
             'hour',
             'minute',
@@ -51,7 +54,7 @@ class SetAlarm(DisplayState):
             'volume']
         self.edit_index = 0
         self.display_manager = display_manager
-        self.motor = config.motor
+        self.motor = motor
         self.motor.ready = False
         # offset from the left edge where things are drawn
         self.offsetx = self.display.width - 10
@@ -132,20 +135,20 @@ class SetAlarm(DisplayState):
         elif self.selection == 'bell':
             self.alarm_active = not self.alarm_active
 
-    def preview(self):
-        if not config.speaker.queryBusy():
+    def on_snze_l(self):
+        if not speaker.queryBusy():
             self.motor.set_movement_by_ringtone(self.ringtone_index)
-            config.speaker.setVolume(self.volume)
-            config.speaker.playTrack(1, self.ringtone_index)
-            #self.motor.start()
-            config.headlights.start(f"pulsepatterns/{self.ringtone_index}.json")
+            speaker.setVolume(self.volume)
+            speaker.playTrack(1, self.ringtone_index)
+            # self.motor.start()
+            headlights.start(f"pulsepatterns/{self.ringtone_index}.json")
         else:
             print("stopping preview")
-            config.speaker.pause()
-            #self.motor.stop()
-            config.headlights.stop()
+            speaker.pause()
+            # self.motor.stop()
+            headlights.stop()
 
-    def goto_midpoint(self):
+    def on_clk_set(self):
         if self.selection == 'minute':
             self.minute = 30
         elif self.selection == 'hour':
@@ -160,7 +163,7 @@ class SetAlarm(DisplayState):
         elif self.selection == 'volume':
             self.volume = 15
 
-    def on_exit(self):
+    def on_alm_set(self):
         with open('alarm.json', 'r') as f:
             alarm_msg = json.load(f)['alarm_message']
 
@@ -191,7 +194,7 @@ class SetAlarm(DisplayState):
         self.display_manager.set_active_state(aliases.home)
         self.motor.ready = False
 
-    def on_selection(self):
+    def on_snd_fx_l(self):
         self.edit_index = (self.edit_index + 1) % len(self.edit_options)
         self.selection = self.edit_options[self.edit_index]
 
@@ -292,11 +295,10 @@ class SetAlarm(DisplayState):
 
 
 if __name__ == '__main__':
-    from displaystates import mode
-
     from alarm import Alarm
+    from displaystates import mode
     displaymanager = mode.DisplayManager()
-    from config import motor, speaker, switch, headlights
+    from config import headlights, motor, speaker, switch
     from hardware import Switch
     switch = Switch(switch)
     alarm = Alarm(60, motor, headlights, speaker, switch)
@@ -304,10 +306,10 @@ if __name__ == '__main__':
     displaymanager.display_states = [setalarm]
     displaymanager.set_active_state("test")
     import _thread
+
     def headlight_loop():
         while True:
             headlights.run()
     _thread.start_new_thread(headlight_loop, ())
     while True:
         displaymanager.run_current_state()
-      

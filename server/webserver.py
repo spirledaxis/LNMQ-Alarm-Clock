@@ -1,9 +1,10 @@
 
+import asyncio
 import socket
 import time
-import asyncio
+
+from creds import password, username
 from kasa import Discover, SmartPlug
-from creds import username, password
 
 
 async def toggle_lights():
@@ -12,7 +13,7 @@ async def toggle_lights():
     dev_info = dev.state_information
     state = bool(dev_info['State'])
     print(state)
-    if state == True:
+    if state:
         await dev.turn_off()
     elif state == False:
         await dev.turn_on()

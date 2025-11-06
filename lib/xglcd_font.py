@@ -1,6 +1,7 @@
 """XGLCD Font Utility."""
 from math import floor
-from framebuf import FrameBuffer, MONO_VLSB  # type: ignore
+
+from framebuf import MONO_VLSB, FrameBuffer  # type: ignore
 
 
 class XglcdFont(object):

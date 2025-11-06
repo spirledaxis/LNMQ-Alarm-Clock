@@ -1,8 +1,10 @@
-import socket
-import select
-import time
 import json
+import select
+import socket
+import time
+
 from machine import RTC  # type: ignore
+
 rtc = RTC()
 # Setup server socket
 

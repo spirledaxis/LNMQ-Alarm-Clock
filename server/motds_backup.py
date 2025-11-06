@@ -1,6 +1,8 @@
-import requests
 import json
 from datetime import datetime
+
+import requests
+
 # to be run by crontab
 try:
     motds = requests.get('http://192.168.1.51/motds.json')
