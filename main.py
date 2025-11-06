@@ -3,7 +3,6 @@ import io
 import json
 import time
 
-import framebuf  # type: ignore
 import machine  # type: ignore
 from machine import RTC, Pin  # type: ignore
 
@@ -15,13 +14,12 @@ from displaystates import (DisplayOff, Home, MessageViewer, SetAlarm, aliases,
                            mode)
 from hardware import display, headlights, motor, speaker
 from lib import Neotimer, settime
-from utils import (batstats, connect, fetch_cache, http_get, motd_parser,
-                   tempuratures, make_icon)
+from utils import (batstats, connect, fetch_cache, http_get, make_icon,
+                   motd_parser, tempuratures)
 from alarm import Alarm
-from utils import connect
-booticon = framebuf.FrameBuffer(
-    booticon, 128, 64, framebuf.MONO_VLSB)
-display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
+
+
+display.draw_sprite(make_icon(booticon, 128, 64), x=0, y=0, w=128, h=64)
 display.present()
 
 try:
@@ -177,9 +175,8 @@ except Exception as e:
 
         print("saved error to pico")
 
-    booticon_warning = framebuf.FrameBuffer(
-        failicon, 128, 64, framebuf.MONO_VLSB)
-    display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
+
+    display.draw_sprite(make_icon(booticon_warning, 128, 64), x=0, y=0, w=128, h=64)
     display.present()
     timer = Neotimer(config.bsod_timeout_s * 1000)
     timer.start()
