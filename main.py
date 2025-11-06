@@ -9,15 +9,16 @@ from machine import RTC, Pin  # type: ignore
 
 import config
 import webserver
-from alarm import Alarm
+
 from bigicons import *
 from displaystates import (DisplayOff, Home, MessageViewer, SetAlarm, aliases,
                            mode)
 from hardware import display, headlights, motor, speaker
 from lib import Neotimer, settime
 from utils import (batstats, connect, fetch_cache, http_get, motd_parser,
-                   tempuratures)
-
+                   tempuratures, make_icon)
+from alarm import Alarm
+from utils import connect
 booticon = framebuf.FrameBuffer(
     booticon, 128, 64, framebuf.MONO_VLSB)
 display.draw_sprite(booticon, x=0, y=0, w=128, h=64)
@@ -27,23 +28,32 @@ try:
     rtc = RTC()
     print(machine.freq())
 
-    wifi = connect.do_connect()
-    settime()
-    fetch_cache()
+    wifi = connect.do_connect(0)
+    print(connect.check_connection())
+    if connect.check_connection() == True:
+        print("im good")
+        settime()
+        fetch_cache()
+    else:
+        print("im cooked")
+        display.draw_sprite(make_icon(booticon_warning, 128, 64), 0, 0, 128, 64)
+        display.present()
+        time.sleep(5)
+
     s, clients = webserver.web_setup()
 
-    myalarm = Alarm(config.alarm_timeout_min * 60,
+    alarm = Alarm(config.alarm_timeout_min * 60,
                     motor, headlights, speaker)
     # alarm testing
     # myalarm.hour = now[4]
     # myalarm.minute = now[5]
 
-    display_manager = mode.DisplayManager(myalarm)
+    display_manager = mode.DisplayManager(alarm)
     home = Home(display_manager, aliases.home)
-    alarm = SetAlarm(display_manager, aliases.set_alarm)
+    setalarm = SetAlarm(display_manager, aliases.set_alarm)
     off = DisplayOff(display_manager, aliases.display_off)
     message_reader = MessageViewer(display_manager, home, aliases.message_reader)
-    display_manager.display_states = [home, alarm, off, message_reader]
+    display_manager.display_states = [home, setalarm, off, message_reader]
     display_manager.set_active_state(aliases.home)
     display.set_contrast(0)
 
@@ -95,12 +105,12 @@ try:
 
         # handle alarm
         if display_manager.alarm_active:
-            myalarm.update(now, home)
+            alarm.update(now, home)
 
         # ntp
         hour = now[4]
         minute = now[5]
-        if hour == 2 and minute == 1 and not lock_ntptime:
+        if hour == 2 and minute == 1 and not lock_ntptime and connect.check_connection():
             lock_ntptime = True
             try:
                 settime()
