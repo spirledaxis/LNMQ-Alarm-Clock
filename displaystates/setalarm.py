@@ -293,23 +293,3 @@ class SetAlarm(DisplayState):
         self.display_bell()
         self.selection_line()
 
-
-if __name__ == '__main__':
-    from alarm import Alarm
-    from displaystates import mode
-    displaymanager = mode.DisplayManager()
-    from config import headlights, motor, speaker, switch
-    from hardware import Switch
-    switch = Switch(switch)
-    alarm = Alarm(60, motor, headlights, speaker, switch)
-    setalarm = SetAlarm(displaymanager, alarm, "test")
-    displaymanager.display_states = [setalarm]
-    displaymanager.set_active_state("test")
-    import _thread
-
-    def headlight_loop():
-        while True:
-            headlights.run()
-    _thread.start_new_thread(headlight_loop, ())
-    while True:
-        displaymanager.run_current_state()

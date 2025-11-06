@@ -428,22 +428,4 @@ class Home(DisplayState):
             self.offset = 0
 
 
-if __name__ == '__main__':
-    import machine  # type: ignore
 
-    from alarm import Alarm
-    from displaystates import mode
-    displaymanager = mode.DisplayManager()
-    from config import motor, speaker, switch
-    from hardware import Switch
-    switch = Switch(switch)
-    alarm = Alarm(60, motor, 12, speaker)
-    home = Home(displaymanager, alarm, "test")
-    displaymanager.display_states = [home]
-    displaymanager.set_active_state("test")
-    machine.RTC().datetime((2025, 11, 1, 5, 23, 0, 0, 0))
-    while True:
-        start = time.ticks_ms()
-        displaymanager.run_current_state()
-        display_elapsed = time.ticks_diff(time.ticks_ms(), start)
-        print(display_elapsed)

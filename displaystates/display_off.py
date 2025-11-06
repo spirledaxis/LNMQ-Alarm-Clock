@@ -90,11 +90,4 @@ class DisplayOff(DisplayState):
         self.display_manager.set_active_state(aliases.home)
 
 
-if __name__ == '__main__':
-    from displaystates import mode
-    display_manager = mode.DisplayManager()
-    off = DisplayOff(display_manager, "off")
-    display_manager.display_states = [off]
-    display_manager.set_active_state("off")
-    while True:
-        display_manager.run_current_state()
+
