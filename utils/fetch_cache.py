@@ -1,13 +1,15 @@
 import errno
 import json
+import time
 
 import config
 import utils.motd_parser as motd_parser
 from bigicons import *
 from hardware import display
-from .http_get import http_get
 from utils import make_icon
-import time
+
+from .http_get import http_get
+
 
 def fetch_cache():
     booticon_warning = make_icon(booticon_warning, 128, 64)
