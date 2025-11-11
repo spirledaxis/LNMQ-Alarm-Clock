@@ -26,14 +26,12 @@ try:
     rtc = RTC()
     print(machine.freq())
 
-    wifi = connect.do_connect(0)
+    wifi = connect.do_connect(3)
     print(connect.check_connection())
     if connect.check_connection() == True:
-        print("im good")
         settime()
         fetch_cache()
     else:
-        print("im cooked")
         display.draw_sprite(make_icon(booticon_warning, 128, 64), 0, 0, 128, 64)
         display.present()
         time.sleep(5)

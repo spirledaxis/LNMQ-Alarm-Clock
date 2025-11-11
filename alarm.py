@@ -11,7 +11,6 @@ class Alarm:
     def __init__(self, timeout_s, motor, headlights, speaker):
         """use military time for the hour. """
         with open('alarm.json', 'r') as f:
-            # print(f.read())
             alarm = json.load(f)
             alarm_hour = int(alarm['hour'])
             alarm_ampm = alarm['ampm']
@@ -39,7 +38,6 @@ class Alarm:
 
         now_hour = now[4]
         now_minute = now[5]
-        #print(self.hour, self.minute, self.locked, self.enabled)
         if now_hour == self.hour and now_minute == self.minute and not self.locked:
             self.fire(now, home)
             print("firing")
