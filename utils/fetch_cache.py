@@ -6,13 +6,13 @@ import config
 import utils.motd_parser as motd_parser
 from bigicons import *
 from hardware import display
-from utils import make_icon
+from utils.make_icon import make_icon
 
 from .http_get import http_get
 
-
+booticon_warning = make_icon(booticon_warning, 128, 64)
 def fetch_cache():
-    booticon_warning = make_icon(booticon_warning, 128, 64)
+    
     with open('motds.json', 'r') as f:
         motds = json.load(f)
     try:
