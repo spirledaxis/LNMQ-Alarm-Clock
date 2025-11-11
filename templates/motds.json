@@ -1,0 +1,4 @@
+[{"time": [2025, 8, 4, 0, 18, 18, 35, 0], "new": false, "motd": "hello world", "id": 1, "author": "RealisticTurtle"}, 
+    {"time": [2025, 9, 6, 5, 22, 51, 29, 0], "new": false, "motd": "I'm RealisticTurtle's friend!", "id": 2, "author": "AwesomeDude1337"}, 
+    {"time": [2025, 9, 6, 5, 22, 51, 46, 0], "new": true, "motd": "I was sent when the clock was offline!", "id": 3, "author": "RealisticTurtle"}
+]

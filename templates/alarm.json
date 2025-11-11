@@ -1,0 +1,9 @@
+{
+"hour": 7,
+"minute": 30,
+"ampm": "am",
+"ringtone": 1,
+"volume": 10,
+"alarm_message": "This is an alarm message!",
+"is_active": false
+}
