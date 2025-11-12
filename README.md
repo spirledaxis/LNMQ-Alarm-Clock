@@ -3,9 +3,9 @@
   
 
 This is a modified Lightning Mcqueen Alarm clock. It runs off a Pi Pico W. It's a sort of "smart" alarm clock. 
-![screenshot](images\IMG_9826.gif)
+![screenshot](images/IMG_9826.gif)
 Original clock:
-![screenshot](images\66819669250__FFFA1B10-804C-475B-8AB6-758A3A46D3C5.png)
+![screenshot](images/66819669250__FFFA1B10-804C-475B-8AB6-758A3A46D3C5.png)
 Note: for better cable management, I mounted the screen upside down. Thus, the display code assumes the origin in the bottom right corner, and has rotate=180 everywhere. (I didn't realize the library I was using can flip the display until it was too late)
 ## Features
 -	2.42" OLED display with automatic timeout and diffrent states
@@ -131,9 +131,9 @@ See the Fritzing sketch. (Fritzing file is also in the repo) ![screenshot](image
 - Ambient temperature sensor
 
 # Build
-![screenshot](images\overall.png)
-![screenshot](images\board.png)
-![screenshot](images\power.png)
+![screenshot](images/overall.png)
+![screenshot](images/board.png)
+![screenshot](images/power.png)
 
 #  Kudos
 
