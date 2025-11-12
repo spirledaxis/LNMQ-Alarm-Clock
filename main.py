@@ -40,9 +40,7 @@ try:
 
     alarm = Alarm(config.alarm_timeout_min * 60,
                     motor, headlights, speaker)
-    # alarm testing
-    # myalarm.hour = now[4]
-    # myalarm.minute = now[5]
+    now = rtc.datetime()
 
     display_manager = mode.DisplayManager(alarm)
     home = Home(display_manager, aliases.home)
