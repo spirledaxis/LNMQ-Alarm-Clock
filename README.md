@@ -34,6 +34,7 @@ For music-synced LEDS, create a ``pulsepatterns`` dir on the pico. Upload pulsep
 
 ## Templates
 alarm.json: quite straightforward. It is adjustable from the clock so you don't need to modify the file
+
 motds.json: You may start with an empty list json '[]', then fill it up with the discord bot
 -   Note: the 'time' key is currently not being used. It was intended to filter messages by how old they were, but I never coded that.
 ringtones.json: Make sure this is synced with your DFplayer SD card. For example, if you have a Clash-Royale themed ringtone on 006.mp3 on the SD card:
@@ -141,12 +142,10 @@ See the Fritzing sketch. (Fritzing file is also in the repo) ![screenshot](image
 
 Rdagger68 – Library for display and fonts, writeup example
 
-  
-
 Mannbro – Library for DFplayer
-
-  
 
 Jrullan – Library for Neotimer
 
 Javl - https://javl.github.io/image2cpp/
+
+AwDev - https://awdevsoftware.org/
