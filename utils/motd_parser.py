@@ -53,3 +53,14 @@ def select_random_motd(data):
     motd = id_search(data, r)
     print(motd)
     return motd
+
+def select_random_motd_queue(queue: list):
+    if len(queue) > 1:
+        r = random.randint(0, len(queue)-1)
+    else:
+        print("theres only 1 element left")
+        r = 0
+    print(f"selecting from {queue} with index {r} (len = {len(queue)})")
+    motd = queue[r]
+    queue.pop(r)
+    return motd, queue

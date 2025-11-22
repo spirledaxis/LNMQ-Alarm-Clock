@@ -30,6 +30,7 @@ class Home(DisplayState):
         super().__init__(self.button_map, name, display_manager)
         self.display_manager = display_manager
         self.motd = ''
+        self.motd_queue = []
         self.prev_motd = ''
         self.motd_dir = 'l'
         self.motd_mode = 'scroll'
@@ -38,6 +39,10 @@ class Home(DisplayState):
         with open('motds.json', 'r') as f:
             motds_data = json.load(f)
         self.motds_data = motds_data
+        self.motd_queue = motds_data[:]
+        print("id(motds_data) =", id(self.motds_data))
+        print("id(motd_queue) =", id(self.motd_queue))
+
         self.new_motds = []
         self.reset_motd()
         for motd_json in motds_data:
@@ -138,6 +143,7 @@ class Home(DisplayState):
             motd = f"{motd['motd']} @{motd['author']}"
 
             self.reset_motd(motd)
+            self.motd_queue.append(self.new_motds[0])
             self.new_motds.pop(0)
 
             # update the json file so it says new: false
@@ -148,6 +154,7 @@ class Home(DisplayState):
             with open('motds.json', 'r') as f:
                 self.motds_data = json.load(f)
 
+            
     def on_snze(self):
         if self.alarm.is_active:
             self.alarm.stop(False)
@@ -258,8 +265,16 @@ class Home(DisplayState):
             self.draw_temp()
 
     def reset_motd(self, motd=None):
-        while self.motd == self.prev_motd:
-            self.motd = motd_parser.select_random_motd(self.motds_data)['motd']
+        if len(self.motd_queue) == 0:
+            print("refilling queue")
+            self.motd_queue = self.motds_data[:]
+
+        print("motd ququq", self.motd_queue)
+        print("motds data", self.motds_data)
+        self.motd, self.motd_queue = motd_parser.select_random_motd_queue(self.motd_queue)
+        self.motd = self.motd['motd']
+
+                
         if motd:
             self.motd = motd
         self.prev_motd = self.motd
