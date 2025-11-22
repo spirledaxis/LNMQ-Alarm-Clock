@@ -172,7 +172,7 @@ except Exception as e:
         print("saved error to pico")
 
 
-    display.draw_sprite(make_icon(booticon_warning, 128, 64), x=0, y=0, w=128, h=64)
+    display.draw_sprite(make_icon(failicon, 128, 64), x=0, y=0, w=128, h=64)
     display.present()
     timer = Neotimer(config.bsod_timeout_s * 1000)
     timer.start()
