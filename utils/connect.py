@@ -27,14 +27,16 @@ def do_connect(retries=3):
     ip, subnet, gateway, dns = sta_if.ifconfig()
     print('Network config:', (ip, subnet, gateway, dns))
 
-    if ip == "0.0.0.0" and retry_counter < retries:
-        print("Detected bad IP, retrying...")
+    if (ip == "0.0.0.0" and retry_counter < retries) or (sta_if.isconnected() == False and retry_counter < retries):
+        print("Detected bad IP or not connected, retrying...")
         time.sleep(5)
         retry_counter += 1
         print(retry_counter, retries)
         connect()
-
+    else:
+        print(f"not retrying {sta_if}")
     print(sta_if)
+    print("type", type(sta_if))
     return sta_if
 
 
