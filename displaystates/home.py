@@ -216,8 +216,12 @@ class Home(DisplayState):
 
     def draw_looptime(self):
         # A constant is used in the x so it doesn't jitter
+        looptime = str(self.looptime)
+        if len(looptime) < 3:
+            looptime = '0' + looptime
+        
         self.display.draw_text((self.display.width + self.time_len) // 2 + 18 + self.offset, (self.display.height + timefont.height) // 2 - bally_mini.height - 3,
-                               f'{self.looptime}', bally_mini, rotate=180)
+                               looptime, bally_mini, rotate=180)
 
     def draw_temp(self):
         x = (self.display.width + self.time_len) // 2 + 18 + 10 + self.offset
@@ -257,7 +261,8 @@ class Home(DisplayState):
         x = (self.display.width + self.time_len) // 2 + \
             bally_mini.measure_text(disp_str) + self.offset
         y = self.display.height // 2 - timefont.height // 2 + bally_mini.height // 2 + 2
-        if (hours <= 8 and minutes <= 30) or hours <= 7:
+
+        if (hours <= 8 and minutes <= 30) or hours <= 7 and self.display_manager.alarm_active == True:
             self.apply_offset = True
             self.display.draw_text(x, y, disp_str, bally_mini, rotate=180)
             self.display.draw_sprite(self.sleep_icon, x + 2, y + 1, 7, 7)
@@ -366,9 +371,9 @@ class Home(DisplayState):
         elif self.display_manager.alarm_active and self.alarm.snoozed:
             self.iconactive_bell = True
             self.display.draw_sprite(self.snooze_icon, x=x1, y=y2, w=8, h=8)
-        else:
-            self.iconactive_bell = False
-            self.display.draw_sprite(self.bell_icon_off, x=x1, y=y2, w=8, h=8)
+        # else:
+        #     self.iconactive_bell = False
+        #     self.display.draw_sprite(self.bell_icon_off, x=x1, y=y2, w=8, h=8)
 
         # Power and battery icons
         if self.usb_power.value() == 1:
