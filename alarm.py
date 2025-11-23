@@ -71,7 +71,7 @@ class Alarm:
 
         if now[2] == 1:
             self.original_ringtone = self.ringtone
-            self.ringtone = 11  # first of the month ringtone
+            self.ringtone = config.first_of_month_index  # first of the month ringtone
 
         with open('alarm.json', 'r') as f:
             alarm_message = json.load(f)['alarm_message']

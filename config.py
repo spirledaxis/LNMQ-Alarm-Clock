@@ -73,4 +73,5 @@ sleep_offset_min = 20
 bat_adc = 28
 msg_scroll_speed = 1
 snooze_min = 10
-scroll_on_fwd = 20
+scroll_on_fwd = 64
+first_of_month_index = 25
