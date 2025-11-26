@@ -54,6 +54,7 @@ class Home(DisplayState):
 
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
         self.rtc = RTC()
+        self.show_invalid_time = False
         self.alarm = display_manager.alarm
         self.time_len = 0
 
@@ -180,7 +181,10 @@ class Home(DisplayState):
         self.display_manager.set_active_state(aliases.message_reader)
 
     def clock(self):
-        now = self.rtc.datetime()
+        if self.show_invalid_time:
+            now = (1984, 1, 1, 0, -1, 99, 30, 0)
+        else:
+            now = self.rtc.datetime()
         month = now[1]
         month_day = now[2]
         day_name_int = now[3]
@@ -191,7 +195,6 @@ class Home(DisplayState):
         hour_ampm, _ = timeutils.convert_to_ampm(hour)
         time_text = f'{hour_ampm}:{minute:02}'
         self.time_len = timefont.measure_text(time_text)
-
         self.time_len = timefont.measure_text(time_text)
         date_text = f'{timeutils.daynum_to_daystr(day_name_int)} | {timeutils.monthnum_to_monthstr(month)} {month_day}'
         date_text_len = bally.measure_text(date_text)
@@ -199,6 +202,8 @@ class Home(DisplayState):
             date_text = f'{timeutils.daynum_to_daystr(day_name_int)} | {timeutils.monthnum_to_monthabbr(month)} {month_day}'
             date_text_len = bally.measure_text(date_text)
 
+        if self.show_invalid_time:
+            date_text = f"Try again."
         # origin is in the bottom right
 
         # Display the time
@@ -429,7 +434,6 @@ class Home(DisplayState):
             self.display.draw_pixel(arrow_x + 1, arrow_y - 2)
 
     def main(self):
-
         self.clock()
         self.draw_sleep_temp()
         self.draw_icons()
