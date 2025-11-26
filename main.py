@@ -19,29 +19,14 @@ from utils import (batstats, connect, fetch_cache, http_get, make_icon,
 from alarm import Alarm
 
 # hello I am here to test the dev branch
-display.draw_sprite(make_icon(booticon, 128, 64), x=0, y=0, w=128, h=64)
-display.present()
+
 
 try:
-    rtc = RTC()
-    print(machine.freq())
-
-    wifi = connect.do_connect(3)
-    print(connect.check_connection())
-    if connect.check_connection() == True:
-        settime()
-        fetch_cache()
-    else:
-        display.draw_sprite(make_icon(booticon_warning, 128, 64), 0, 0, 128, 64)
-        display.present()
-        time.sleep(5)
-
-    s, clients = webserver.web_setup()
-
     alarm = Alarm(config.alarm_timeout_min * 60,
-                    motor, headlights, speaker)
-    now = rtc.datetime()
-
+                motor, headlights, speaker)
+    
+    display.draw_sprite(make_icon(booticon, 128, 64), x=0, y=0, w=128, h=64)
+    display.present()
     display_manager = mode.DisplayManager(alarm)
     home = Home(display_manager, aliases.home)
     setalarm = SetAlarm(display_manager, aliases.set_alarm)
@@ -51,12 +36,26 @@ try:
     display_manager.set_active_state(aliases.home)
     display.set_contrast(0)
 
+    rtc = RTC()
+    now = rtc.datetime()
+    print(now)
+    print(machine.freq())
+
+    wifi = connect.do_connect(3)
+    print("are we connected?", connect.check_connection())
+    if connect.check_connection() == True:
+        settime()
+        fetch_cache()
+    else:
+        display.draw_sprite(make_icon(booticon_warning, 128, 64), 0, 0, 128, 64)
+        display.present()
+        time.sleep(5)
+        home.show_invalid_time = True
+    s, clients = webserver.web_setup()
+
     prev_dur = 0
     loopcycles = 0
     lock_ntptime = False
-
-    now = rtc.datetime()
-    print(now)
 
     usb_power = Pin('WL_GPIO2', Pin.IN)
     usb_prev_state = None
@@ -126,7 +125,10 @@ try:
             wifi.disconnect()
             wifi.active(False)
         elif usb_power.value() == 1 and usb_prev_state == 0:
+            display.draw_sprite(make_icon(connecticon, 128, 64), x=0, y=0, w=128, h=64)
+            display.present()
             connect.do_connect()
+            
 
         usb_prev_state = usb_power.value()
 
