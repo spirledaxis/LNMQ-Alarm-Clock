@@ -239,17 +239,19 @@ class SetAlarm(DisplayState):
 
     def display_bell(self):
         if self.alarm_active:
-            self.display.draw_sprite(self.bell_active,
-                                     self.display.width // (72 + 10),
-                                     (self.display.height // 2) + 4,
-                                     8,
-                                     8)
+            self.display.draw_sprite(
+                self.bell_active,
+                self.display.width // (72 + 10),
+                (self.display.height // 2) + 10,
+                8,
+                8)
         else:
-            self.display.draw_sprite(self.bell_inactive,
-                                     self.display.width // (72 + 10),
-                                     (self.display.height // 2) + 4,
-                                     8,
-                                     8)
+            self.display.draw_sprite(
+                self.bell_inactive,
+                self.display.width // (72 + 10),
+                (self.display.height // 2) + 10,
+                8,
+                8)
 
     def selection_line(self):
         x = self.offsetx
@@ -283,8 +285,7 @@ class SetAlarm(DisplayState):
             )
 
         elif self.selection == 'bell':
-            self.display.draw_hline(
-                self.display.width // (72 + 10), (self.display.height // 2), 8)
+            self.display.draw_vline((self.display.width // (72 + 10)) + 9, (self.display.height // 2) + 10, 8)
 
     def main(self):
         self.display_alarm_time()
@@ -293,3 +294,16 @@ class SetAlarm(DisplayState):
         self.display_bell()
         self.selection_line()
 
+
+if __name__ == '__main__':
+    import mode
+    import aliases
+    from alarm import Alarm
+    myalarm = Alarm(config.alarm_timeout_min * 60,
+                motor, headlights, speaker)
+    
+    display_manager = mode.DisplayManager(myalarm)
+    setalarm = SetAlarm(display_manager, aliases.set_alarm)
+    display_manager.display_states = [setalarm]
+    display_manager.set_active_state(aliases.set_alarm)
+    
