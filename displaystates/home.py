@@ -241,36 +241,30 @@ class Home(DisplayState):
                                  y + bally_mini.height // 2,
                                  3, 3)
 
-    def draw_sleep_temp(self):
+    def draw_est_sleep(self):
         now = self.rtc.datetime()
-        curr_hour = now[4]
-        curr_minute = now[5]
 
-        alarm_hour = self.alarm.hour
-        alarm_minute = self.alarm.minute
+        #convert it all to minutes
+        curr_minutes = now[4] * 60 + now[5]
+        alarm_minutes = self.alarm.hour * 60 + self.alarm.minute
 
-        # Calculate hours and minutes until alarm
-        hours = alarm_hour - curr_hour
-        minutes = alarm_minute - curr_minute - config.sleep_offset_min
+        est_sleep = (1440 - (curr_minutes - alarm_minutes)) - config.sleep_offset_min
+        self.est_sleep_hours = est_sleep//60
+        self.est_sleep_mins = est_sleep % 60
+        self.apply_offset = True
+        disp_str = f'{self.est_sleep_hours}:{self.est_sleep_mins:02}'
 
-        # Adjust if minutes are negative
-        if minutes < 0:
-            minutes += 60
-            hours -= 1
-
-        # Adjust if hours are negative (alarm is on the next day)
-        if hours < 0:
-            hours += 24
-
-        disp_str = f'{hours}:{minutes:02}'
         x = (self.display.width + self.time_len) // 2 + \
-            bally_mini.measure_text(disp_str) + self.offset
+        bally_mini.measure_text(disp_str) + self.offset
         y = self.display.height // 2 - timefont.height // 2 + bally_mini.height // 2 + 2
 
-        if (hours <= 8 and minutes <= 30) or hours <= 7 and self.display_manager.alarm_active == True:
-            self.apply_offset = True
-            self.display.draw_text(x, y, disp_str, bally_mini, rotate=180)
-            self.display.draw_sprite(self.sleep_icon, x + 2, y + 1, 7, 7)
+        self.display.draw_text(x, y, disp_str, bally_mini, rotate=180)
+        self.display.draw_sprite(self.sleep_icon, x + 2, y + 1, 7, 7)
+        
+
+    def draw_sleep_temp(self):
+        if (self.est_sleep_hours <= 8 and self.est_sleep_mins <= 30) and self.display_manager.alarm_active == True:
+            self.draw_est_sleep()
         else:
             self.draw_temp()
 
@@ -435,7 +429,7 @@ class Home(DisplayState):
 
     def main(self):
         self.clock()
-        self.draw_sleep_temp()
+        self.draw_est_sleep()
         self.draw_icons()
         self.draw_looptime()
         self.dst_warning()
