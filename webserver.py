@@ -1,7 +1,7 @@
 import json
 import select
 import socket
-from machine import RTC
+from machine import RTC #type: ignore
 
 rtc = RTC()
 
