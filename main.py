@@ -94,6 +94,13 @@ try:
 
                 with open('alarm.json', 'w') as f:
                     json.dump(data, f)
+            elif check[0] == "toggle_disp":
+                if display_manager.current_state == aliases.home:
+                    print("turning off from web")
+                    display_manager.set_active_state(aliases.display_off)
+                else:
+                    print("turning on from web")
+                    display_manager.set_active_state(aliases.home)
         webserver_elapsed = time.ticks_diff(time.ticks_ms(), webservertimer)
 
         # handle alarm

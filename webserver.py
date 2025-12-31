@@ -193,7 +193,10 @@ def web_server(s, clients, status_json):
 
             close_client(cl, clients)
             return None
-
+        if "GET /toggle_disp" in request:
+            send_response(cl, "Toggled Display")
+            close_client(cl, clients)
+            return ("toggle_disp", -1)
         # --- Default route ---
         send_response(cl, "Default response")
         close_client(cl, clients)
