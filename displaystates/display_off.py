@@ -31,6 +31,7 @@ class DisplayOff(DisplayState):
         self.usb_power = Pin('WL_GPIO2', Pin.IN)
         self.battery_icon_timer = Neotimer(5000)
         self.draw_battery = False
+        self.bat_icon = batstats.get_bat_sprite()
         self.bat_x = 64
         self.bat_y = 32
 
@@ -44,12 +45,13 @@ class DisplayOff(DisplayState):
             if not self.display.on:
                 self.display.wake()
             self.display.draw_sprite(
-                batstats.get_bat_sprite(), self.bat_x, self.bat_y, w=8, h=8)
+                self.bat_icon, self.bat_x, self.bat_y, w=8, h=8)
         else:
             if self.display.on and not self.blink_wifi:
                 self.display.sleep()
 
         if self.battery_icon_timer.repeat_execution():
+            self.bat_icon = batstats.get_bat_sprite()
             if self.blink_wifi:
                 while self.bat_x > 64 and self.bat_y > 32:  # keep out of q1
                     self.bat_x = random.randint(0, 120)
