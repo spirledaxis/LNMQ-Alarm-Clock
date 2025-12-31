@@ -56,6 +56,8 @@ class Home(DisplayState):
         self.rtc = RTC()
         self.show_invalid_time = False
         self.alarm = display_manager.alarm
+        self.est_sleep_hours = 0
+        self.est_sleep_mins = 0
         self.time_len = 0
 
         self.bell_icon_fb = make_icon(
@@ -237,21 +239,11 @@ class Home(DisplayState):
         self.display.draw_text(x, y, f'{tempurature}', bally_mini, rotate=180)
         self.display.draw_sprite(self.degree_symbol,
                                  x -
-                                 bally_mini.measure_text(f'{tempurature}') - 5,
-                                 y + bally_mini.height // 2,
+                                 bally_mini.measure_text(f'{tempurature}') - 3,
+                                 y + (bally_mini.height // 2),
                                  3, 3)
 
     def draw_est_sleep(self):
-        now = self.rtc.datetime()
-
-        #convert it all to minutes
-        curr_minutes = now[4] * 60 + now[5]
-        alarm_minutes = self.alarm.hour * 60 + self.alarm.minute
-
-        est_sleep = (1440 - (curr_minutes - alarm_minutes)) - config.sleep_offset_min
-        self.est_sleep_hours = est_sleep//60
-        self.est_sleep_mins = est_sleep % 60
-        self.apply_offset = True
         disp_str = f'{self.est_sleep_hours}:{self.est_sleep_mins:02}'
 
         x = (self.display.width + self.time_len) // 2 + \
@@ -263,9 +255,20 @@ class Home(DisplayState):
         
 
     def draw_sleep_temp(self):
+        now = self.rtc.datetime()
+        #convert it all to minutes
+        curr_minutes = now[4] * 60 + now[5]
+        alarm_minutes = self.alarm.hour * 60 + self.alarm.minute
+        est_sleep = (alarm_minutes - curr_minutes) % 1440
+        est_sleep -= config.sleep_offset_min
+        self.est_sleep_hours = est_sleep//60
+        self.est_sleep_mins = est_sleep % 60
+
         if (self.est_sleep_hours <= 8 and self.est_sleep_mins <= 30) and self.display_manager.alarm_active == True:
+            self.apply_offset = True
             self.draw_est_sleep()
         else:
+            self.apply_offset = False
             self.draw_temp()
 
     def reset_motd(self, motd=None):
@@ -429,7 +432,7 @@ class Home(DisplayState):
 
     def main(self):
         self.clock()
-        self.draw_est_sleep()
+        self.draw_sleep_temp()
         self.draw_icons()
         self.draw_looptime()
         self.dst_warning()
