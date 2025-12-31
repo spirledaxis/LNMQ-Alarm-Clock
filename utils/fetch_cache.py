@@ -32,7 +32,8 @@ def fetch_cache():
     except OSError as e:
         if e.errno == errno.ETIMEDOUT or e.errno == errno.ECONNRESET:
             display.draw_sprite(booticon_warning, x=0, y=0, w=128, h=64)
-            display.present(time.sleep(5))
+            display.present()
+            time.sleep(5)
             print("timed out while getting cached motds")
         else:
             raise
