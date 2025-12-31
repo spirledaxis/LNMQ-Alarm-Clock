@@ -5,7 +5,7 @@ from alarm import Alarm
 from displaystates import aliases
 from hardware import display, switch
 from lib import Neotimer
-
+from . import aliases
 
 class DisplayManager:
     def __init__(self, alarm: Alarm):
@@ -15,12 +15,15 @@ class DisplayManager:
         self.display_timer.start()
         self.switch = switch
         self.alarm = alarm
+        self.current_state = None
         with open('alarm.json', 'r') as f:
             alarmdata = json.load(f)
             self.alarm_active = alarmdata['is_active']
 
     def set_active_state(self, name):
         print("called activiate state")
+        if self.current_state == aliases.display_off and name == aliases.home:
+            self.current_state_obj.exit(change_state=False) #call .exit() on DisplayOff
         for display_state in self.display_states:
             if display_state.name == name:
                 display_state.active = True

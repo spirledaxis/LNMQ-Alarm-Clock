@@ -80,14 +80,15 @@ class DisplayOff(DisplayState):
             else:
                 raise
 
-    def exit(self):
+    def exit(self, change_state=True):
         print("on exit")
         self.display.wake()
         self.first_time = True
         self.blinked_wifi = 0
         self.blink_wifi = False
         # self.display_manager.display_timer.reset() # buttons already do this
-        self.display_manager.set_active_state(aliases.home)
+        if change_state:
+            self.display_manager.set_active_state(aliases.home)
 
 
 
