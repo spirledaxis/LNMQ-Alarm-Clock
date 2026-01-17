@@ -244,16 +244,15 @@ class Home(DisplayState):
 
     def draw_est_sleep(self):
         disp_str = f'{self.est_sleep_hours}:{self.est_sleep_mins:02}'
-
         x = (self.display.width + self.time_len) // 2 + \
         bally_mini.measure_text(disp_str) + self.offset
-        y = self.display.height // 2 - timefont.height // 2 + bally_mini.height // 2 + 2
+        y = (self.display.height + timefont.height) // 2 - bally_mini.height - 3
 
         self.display.draw_text(x, y, disp_str, bally_mini, rotate=180)
         self.display.draw_sprite(self.sleep_icon, x + 2, y + 1, 7, 7)
         
 
-    def draw_sleep_temp(self):
+    def draw_sleep_or_ticks(self):
         now = self.rtc.datetime()
         #convert it all to minutes
         curr_minutes = now[4] * 60 + now[5]
@@ -268,7 +267,7 @@ class Home(DisplayState):
             self.draw_est_sleep()
         else:
             self.apply_offset = False
-            self.draw_temp()
+            self.draw_looptime()
 
     def reset_motd(self, motd=None):
         if len(self.motd_queue) == 0:
@@ -436,9 +435,10 @@ class Home(DisplayState):
 
     def main(self):
         self.clock()
-        self.draw_sleep_temp()
+        self.draw_sleep_or_ticks()
         self.draw_icons()
-        self.draw_looptime()
+        self.draw_temp()
+        #self.draw_looptime()
         self.dst_warning()
         if self.motd_mode == 'scroll':
             self.scroll_motd()
