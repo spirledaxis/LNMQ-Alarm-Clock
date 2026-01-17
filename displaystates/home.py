@@ -263,7 +263,7 @@ class Home(DisplayState):
         self.est_sleep_hours = est_sleep//60
         self.est_sleep_mins = est_sleep % 60
 
-        if (self.est_sleep_hours <= 8 and self.est_sleep_mins <= 30) and self.display_manager.alarm_active == True:
+        if est_sleep <= 510 and est_sleep >= 30 and self.display_manager.alarm_active == True:
             self.apply_offset = True
             self.draw_est_sleep()
         else:
