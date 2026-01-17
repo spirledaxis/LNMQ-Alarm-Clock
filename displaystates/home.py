@@ -68,8 +68,7 @@ class Home(DisplayState):
             [0xc1, 0xe1, 0xf1, 0xb9, 0x9d, 0x8f, 0x87, 0x83])
         self.plug_icon = make_icon(
             [0x00, 0x10, 0xf8, 0x1f, 0x1f, 0xf8, 0x10, 0x00])
-        self.battery_icon = make_icon(
-            [0x00, 0x3f, 0x21, 0xe1, 0xe1, 0x21, 0x3f, 0x00])
+        self.battery_icon = batstats.get_bat_sprite()
         self.wifi_icon = make_icon(
             [0x00, 0xff, 0x00, 0x3f, 0x00, 0x0f, 0x00, 0x03])
         self.no_wifi_icon = make_icon(
@@ -79,7 +78,7 @@ class Home(DisplayState):
         self.sleep_icon = make_icon(
             [0x40, 0x20, 0x42, 0x05, 0x42, 0x20, 0x40], 7, 7)
         self.degree_symbol = make_icon([0x02, 0x05, 0x02], 3, 3)
-
+        self.baticon_lock = False
         self.blink_wifi_max = config.blink_wifi_max
         self.blinked_wifi = 0
         self.blink_wifi = False
@@ -228,7 +227,7 @@ class Home(DisplayState):
             looptime = '0' + looptime
         
         self.display.draw_text((self.display.width + self.time_len) // 2 + 18 + self.offset, (self.display.height + timefont.height) // 2 - bally_mini.height - 3,
-                               looptime, bally_mini, rotate=180)
+                                looptime, bally_mini, rotate=180)
 
     def draw_temp(self):
         x = (self.display.width + self.time_len) // 2 + 18 + 10 + self.offset
@@ -379,12 +378,17 @@ class Home(DisplayState):
 
         # Power and battery icons
         if self.usb_power.value() == 1:
+            self.baticon_lock = False
             self.iconactive_battery = False
             self.display.draw_sprite(self.plug_icon, x=x1, y=y1, w=8, h=8)
         elif now[6] % 2 == 0:
+            if not self.baticon_lock:
+                self.battery_icon = batstats.get_bat_sprite()
+                self.baticon_lock = True
+
             self.iconactive_battery = True
             self.display.draw_sprite(
-                batstats.get_bat_sprite(), x=x1, y=y1, w=8, h=8)
+                self.battery_icon, x=x1, y=y1, w=8, h=8)
 
         # WiFi icons
         if network.WLAN(network.WLAN.IF_STA).isconnected():
