@@ -59,7 +59,7 @@ display_messenger_timeout_min = 360
 messenger_cycle_time_s = 30
 messenger_icon_invert_time_s = 10
 messenger_drift_inverval_ms = 15_000
-alarm_timeout_min = 5
+alarm_timeout_min = 3
 bsod_timeout_s = 15
 blink_nowifi_ms = 200
 
