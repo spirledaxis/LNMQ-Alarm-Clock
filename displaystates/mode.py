@@ -60,7 +60,12 @@ class DisplayManager:
 
         if self.current_state == aliases.set_alarm:
             self.alarm_active = self.current_state_obj.alarm_active
-
+    def get_state_obj_by_name(self, name):
+        for state in self.display_states:
+            if state.name == name:
+                print(f"giving you {state.name}")
+                return state
+                
 
 class DisplayState:
     def __init__(self, buttonmap, name, display_manager: DisplayManager):

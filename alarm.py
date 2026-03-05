@@ -22,6 +22,7 @@ class Alarm:
 
         self.is_active = False
         self.locked = False  # used so we don't call fire for the entire minute
+        self.locktimer = Neotimer(61_000)
         self.motor = motor
         self.headlights = headlights
         self.motor.set_movement_by_ringtone(self.ringtone)
@@ -31,6 +32,7 @@ class Alarm:
         self.snoozed = False
 
     def update(self, now, home):
+        print(self.locked)
         """
         Args:
             now: a rtc tuple"""
@@ -42,7 +44,8 @@ class Alarm:
             self.fire(now, home)
             print("firing")
 
-        elif now_minute != self.minute and self.locked:
+        elif self.locktimer.finished() and self.locked:
+            self.locktimer.reset()
             self.locked = False
 
         if self.timeout_timer.finished():
@@ -80,6 +83,7 @@ class Alarm:
 
         print("alarm should go off now")
         self.locked = True
+        self.locktimer.start()
         self.is_active = True
         home.display_manager.display.wake()
         home.display_manager.display_timer.restart()
@@ -130,3 +134,4 @@ class Alarm:
                     self.hour = 0
 
             self.snoozed = False
+ 

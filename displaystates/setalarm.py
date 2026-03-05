@@ -4,7 +4,7 @@ import framebuf  # type: ignore
 
 import config
 from hardware import Button, RepeatButton, headlights, motor, speaker
-from utils import timeutils
+from utils import timeutils, motd_parser
 
 from . import aliases
 from .fonts import bally, timefont
@@ -50,6 +50,7 @@ class SetAlarm(DisplayState):
             'minute',
             'ampm',
             'bell',
+            'snooze',
             'ringtone',
             'volume']
         self.edit_index = 0
@@ -59,7 +60,8 @@ class SetAlarm(DisplayState):
         # offset from the left edge where things are drawn
         self.offsetx = self.display.width - 10
         self.ampm_offsetx = 10  # offset from the right edge, needs to be added to ampm len
-
+        self.snooze_icon = framebuf.FrameBuffer(bytearray((
+            [0xc1, 0xe1, 0xf1, 0xb9, 0x9d, 0x8f, 0x87, 0x83])), 8, 8, framebuf.MONO_VLSB)
         self.bell_active = framebuf.FrameBuffer(bytearray((
             [0x03, 0x0c, 0x10, 0xe1, 0xe1, 0x10, 0x0c, 0x03])), 8, 8, framebuf.MONO_VLSB)
         self.bell_inactive = framebuf.FrameBuffer(bytearray((
@@ -67,10 +69,11 @@ class SetAlarm(DisplayState):
 
     def on_fwd(self):
         if self.selection == 'minute':
-            if self.minute + 5 >= 60:
-                self.minute = 0
-            else:
-                self.minute += 5
+            self.minute += 1
+            # if self.minute + 5 >= 60:
+            #     self.minute = 0
+            # else:
+            #     self.minute += 1
         elif self.selection == 'hour':
             if self.hour + 1 > 12:
                 self.hour = 1
@@ -100,6 +103,12 @@ class SetAlarm(DisplayState):
                 self.volume += 1
         elif self.selection == 'bell':
             self.alarm_active = not self.alarm_active
+        elif self.selection == 'snooze':
+            self.alarm.stop() #has built-in snooze reset
+            self.on_snd_fx_l()
+            home_state = self.display_manager.get_state_obj_by_name("home")       
+            home_state.motd = motd_parser.select_random_motd(home_state.motds_data)['motd']
+            home_state.motd_mode = 'scroll'
 
     def on_rev(self):
         if self.selection == 'minute':
@@ -134,7 +143,12 @@ class SetAlarm(DisplayState):
                 self.volume -= 1
         elif self.selection == 'bell':
             self.alarm_active = not self.alarm_active
-
+        elif self.selection == 'snooze':
+            self.alarm.stop() #has built-in snooze reset
+            self.on_snd_fx_l()
+            home_state = self.display_manager.get_state_obj_by_name("home")       
+            home_state.motd = motd_parser.select_random_motd(home_state.motds_data)['motd']
+            home_state.motd_mode = 'scroll'
     def on_snze_l(self):
         if not speaker.queryBusy():
             self.motor.set_movement_by_ringtone(self.ringtone_index)
@@ -197,6 +211,10 @@ class SetAlarm(DisplayState):
     def on_snd_fx_l(self):
         self.edit_index = (self.edit_index + 1) % len(self.edit_options)
         self.selection = self.edit_options[self.edit_index]
+        if not self.alarm.snoozed and self.selection == 'snooze':
+            self.edit_index = (self.edit_index + 1) % len(self.edit_options)
+            self.selection = self.edit_options[self.edit_index]
+        
 
     def display_alarm_time(self):
         time_display = f"{self.hour}:{self.minute:02}"
@@ -252,7 +270,14 @@ class SetAlarm(DisplayState):
                 (self.display.height // 2) + 10,
                 8,
                 8)
-
+    def display_snooze(self):
+        if self.alarm.snoozed:
+            self.display.draw_sprite(
+                self.snooze_icon,
+                (self.display.width // (72 + 10)) + 15,
+                (self.display.height // 2) + 10,
+                8,
+                8)
     def selection_line(self):
         x = self.offsetx
         y = self.display.height // 2 - timefont.height // 2
@@ -287,11 +312,14 @@ class SetAlarm(DisplayState):
         elif self.selection == 'bell':
             self.display.draw_vline((self.display.width // (72 + 10)) + 9, (self.display.height // 2) + 10, 8)
 
+        elif self.selection == 'snooze':
+            self.display.draw_vline((self.display.width // (72 + 10)) + 9 + 15, (self.display.height // 2) + 10, 8)
     def main(self):
         self.display_alarm_time()
         self.display_ringtone()
         self.motor.do_movement()
         self.display_bell()
+        self.display_snooze()
         self.selection_line()
 
 
